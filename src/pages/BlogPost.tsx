@@ -144,7 +144,7 @@ const BlogPost = () => {
 
               <div className="aspect-video mb-8 rounded-lg overflow-hidden">
                 <img
-                  src={blog.featured_image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d'}
+                  src={blog.featured_image || 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b'}
                   alt={blog.title}
                   className="w-full h-full object-cover"
                 />
@@ -168,7 +168,7 @@ const BlogPost = () => {
                         key={search.id}
                         to={`/web-results/${search.id}`}
                         onClick={() => handleRelatedSearchClick(search.id)}
-                        className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-search-box-hover hover:shadow-lg hover:scale-[1.02] transition-all duration-200 group cursor-pointer"
+                        className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-black hover:text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-200 group cursor-pointer"
                       >
                         <span className="font-medium">{search.search_text}</span>
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
