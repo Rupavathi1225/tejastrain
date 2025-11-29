@@ -14,7 +14,292 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analytics_events: {
+        Row: {
+          blog_id: string | null
+          country: string | null
+          created_at: string | null
+          device_type: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          related_search_id: string | null
+          session_id: string | null
+          source: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          blog_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          related_search_id?: string | null
+          session_id?: string | null
+          source?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          blog_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          device_type?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          related_search_id?: string | null
+          session_id?: string | null
+          source?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_blog_id_fkey"
+            columns: ["blog_id"]
+            isOneToOne: false
+            referencedRelation: "blogs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analytics_events_related_search_id_fkey"
+            columns: ["related_search_id"]
+            isOneToOne: false
+            referencedRelation: "related_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blogs: {
+        Row: {
+          author: string
+          category_id: number | null
+          content: string
+          created_at: string | null
+          featured_image: string | null
+          id: string
+          published_at: string | null
+          slug: string
+          status: string | null
+          title: string
+        }
+        Insert: {
+          author: string
+          category_id?: number | null
+          content: string
+          created_at?: string | null
+          featured_image?: string | null
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: string | null
+          title: string
+        }
+        Update: {
+          author?: string
+          category_id?: number | null
+          content?: string
+          created_at?: string | null
+          featured_image?: string | null
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blogs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          code_range: string
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          code_range: string
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          code_range?: string
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      email_submissions: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          ip_address: string | null
+          related_search_id: string | null
+          session_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          ip_address?: string | null
+          related_search_id?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          ip_address?: string | null
+          related_search_id?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_submissions_related_search_id_fkey"
+            columns: ["related_search_id"]
+            isOneToOne: false
+            referencedRelation: "related_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_landing_config: {
+        Row: {
+          background_color: string | null
+          background_image_url: string | null
+          button_text: string | null
+          created_at: string | null
+          description: string | null
+          destination_url: string | null
+          headline: string | null
+          id: string
+          logo_position: string | null
+          logo_url: string | null
+          main_image_url: string | null
+          related_search_id: string | null
+        }
+        Insert: {
+          background_color?: string | null
+          background_image_url?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          destination_url?: string | null
+          headline?: string | null
+          id?: string
+          logo_position?: string | null
+          logo_url?: string | null
+          main_image_url?: string | null
+          related_search_id?: string | null
+        }
+        Update: {
+          background_color?: string | null
+          background_image_url?: string | null
+          button_text?: string | null
+          created_at?: string | null
+          description?: string | null
+          destination_url?: string | null
+          headline?: string | null
+          id?: string
+          logo_position?: string | null
+          logo_url?: string | null
+          main_image_url?: string | null
+          related_search_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_landing_config_related_search_id_fkey"
+            columns: ["related_search_id"]
+            isOneToOne: true
+            referencedRelation: "related_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      related_searches: {
+        Row: {
+          blog_id: string | null
+          created_at: string | null
+          id: string
+          order_index: number | null
+          search_text: string
+        }
+        Insert: {
+          blog_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_index?: number | null
+          search_text: string
+        }
+        Update: {
+          blog_id?: string | null
+          created_at?: string | null
+          id?: string
+          order_index?: number | null
+          search_text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "related_searches_blog_id_fkey"
+            columns: ["blog_id"]
+            isOneToOne: false
+            referencedRelation: "blogs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      web_results: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          logo_url: string | null
+          order_index: number | null
+          related_search_id: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          order_index?: number | null
+          related_search_id?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          order_index?: number | null
+          related_search_id?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_results_related_search_id_fkey"
+            columns: ["related_search_id"]
+            isOneToOne: false
+            referencedRelation: "related_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
