@@ -15,6 +15,7 @@ interface WebResult {
   description: string | null;
   logo_url: string | null;
   order_index: number;
+  is_sponsored: boolean;
 }
 
 interface RelatedSearch {
@@ -38,7 +39,8 @@ const WebResultsManager = () => {
     url: "",
     description: "",
     logo_url: "",
-    order_index: "0"
+    order_index: "0",
+    is_sponsored: false
   });
 
   useEffect(() => {
@@ -67,7 +69,8 @@ const WebResultsManager = () => {
     
     const resultData = {
       ...formData,
-      order_index: parseInt(formData.order_index)
+      order_index: parseInt(formData.order_index),
+      is_sponsored: formData.is_sponsored
     };
 
     if (editingResult) {
@@ -121,7 +124,8 @@ const WebResultsManager = () => {
       url: result.url,
       description: result.description || "",
       logo_url: result.logo_url || "",
-      order_index: result.order_index.toString()
+      order_index: result.order_index.toString(),
+      is_sponsored: result.is_sponsored
     });
     setIsCreating(true);
   };
@@ -133,7 +137,8 @@ const WebResultsManager = () => {
       url: "",
       description: "",
       logo_url: "",
-      order_index: "0"
+      order_index: "0",
+      is_sponsored: false
     });
     setEditingResult(null);
     setIsCreating(false);
@@ -143,7 +148,7 @@ const WebResultsManager = () => {
     const search = searches.find(s => s.id === searchId);
     if (!search) return searchId;
     const blogTitle = search.blogs?.title || 'Unknown Blog';
-    return `${blogTitle} › ${search.search_text} (WR-${search.wr})`;
+    return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr}`;
   };
 
   return (
@@ -170,7 +175,7 @@ const WebResultsManager = () => {
                 <SelectContent>
                   {searches.map((search) => (
                     <SelectItem key={search.id} value={search.id}>
-                      {search.blogs?.title} › {search.search_text} (WR-{search.wr})
+                      {search.blogs?.title} ››› {search.search_text} ››› WR-{search.wr}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -219,6 +224,18 @@ const WebResultsManager = () => {
                 value={formData.order_index}
                 onChange={(e) => setFormData({ ...formData, order_index: e.target.value })}
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_sponsored}
+                  onChange={(e) => setFormData({ ...formData, is_sponsored: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm font-medium">Mark as Sponsored</span>
+              </label>
             </div>
           </div>
 
