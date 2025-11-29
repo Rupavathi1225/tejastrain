@@ -11,6 +11,7 @@ interface RelatedSearch {
   blog_id: string;
   search_text: string;
   order_index: number;
+  wr: number;
 }
 
 interface Blog {
@@ -26,7 +27,8 @@ const RelatedSearchesManager = () => {
   const [formData, setFormData] = useState({
     blog_id: "",
     search_text: "",
-    order_index: "0"
+    order_index: "0",
+    wr: "1"
   });
 
   useEffect(() => {
@@ -55,7 +57,8 @@ const RelatedSearchesManager = () => {
     
     const searchData = {
       ...formData,
-      order_index: parseInt(formData.order_index)
+      order_index: parseInt(formData.order_index),
+      wr: parseInt(formData.wr)
     };
 
     if (editingSearch) {
@@ -106,13 +109,14 @@ const RelatedSearchesManager = () => {
     setFormData({
       blog_id: search.blog_id,
       search_text: search.search_text,
-      order_index: search.order_index.toString()
+      order_index: search.order_index.toString(),
+      wr: search.wr.toString()
     });
     setIsCreating(true);
   };
 
   const resetForm = () => {
-    setFormData({ blog_id: "", search_text: "", order_index: "0" });
+    setFormData({ blog_id: "", search_text: "", order_index: "0", wr: "1" });
     setEditingSearch(null);
     setIsCreating(false);
   };
@@ -169,6 +173,21 @@ const RelatedSearchesManager = () => {
                 onChange={(e) => setFormData({ ...formData, order_index: e.target.value })}
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">WR (Web Result Set)</label>
+              <Select value={formData.wr} onValueChange={(value) => setFormData({ ...formData, wr: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select WR" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">WR-1</SelectItem>
+                  <SelectItem value="2">WR-2</SelectItem>
+                  <SelectItem value="3">WR-3</SelectItem>
+                  <SelectItem value="4">WR-4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex gap-4 mt-6">
@@ -184,6 +203,7 @@ const RelatedSearchesManager = () => {
             <tr>
               <th className="px-6 py-3 text-left">Blog</th>
               <th className="px-6 py-3 text-left">Search Text</th>
+              <th className="px-6 py-3 text-left">WR</th>
               <th className="px-6 py-3 text-left">Order</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
@@ -193,6 +213,11 @@ const RelatedSearchesManager = () => {
               <tr key={search.id} className="border-t border-border">
                 <td className="px-6 py-4">{getBlogTitle(search.blog_id)}</td>
                 <td className="px-6 py-4">{search.search_text}</td>
+                <td className="px-6 py-4">
+                  <span className="px-2 py-1 bg-primary/10 text-primary rounded text-sm font-medium">
+                    WR-{search.wr}
+                  </span>
+                </td>
                 <td className="px-6 py-4">{search.order_index}</td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
