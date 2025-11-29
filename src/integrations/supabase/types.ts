@@ -267,6 +267,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_sponsored: boolean | null
           logo_url: string | null
           order_index: number | null
           related_search_id: string | null
@@ -277,6 +278,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_sponsored?: boolean | null
           logo_url?: string | null
           order_index?: number | null
           related_search_id?: string | null
@@ -287,6 +289,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_sponsored?: boolean | null
           logo_url?: string | null
           order_index?: number | null
           related_search_id?: string | null

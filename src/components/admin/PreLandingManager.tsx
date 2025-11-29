@@ -135,7 +135,7 @@ const PreLandingManager = () => {
     const search = searches.find(s => s.id === searchId);
     if (!search) return searchId;
     const blogTitle = search.blogs?.title || 'Unknown Blog';
-    return `${blogTitle} › ${search.search_text} (WR-${search.wr})`;
+    return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr}`;
   };
 
   return (
@@ -162,7 +162,7 @@ const PreLandingManager = () => {
                 <SelectContent>
                   {searches.map((search) => (
                     <SelectItem key={search.id} value={search.id}>
-                      {search.blogs?.title} › {search.search_text} (WR-{search.wr})
+                      {search.blogs?.title} ››› {search.search_text} ››› WR-{search.wr}
                     </SelectItem>
                   ))}
                 </SelectContent>

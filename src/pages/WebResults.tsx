@@ -14,6 +14,7 @@ interface WebResult {
   description: string | null;
   logo_url: string | null;
   order_index: number;
+  is_sponsored: boolean;
 }
 
 interface RelatedSearch {
@@ -88,76 +89,75 @@ const WebResults = () => {
       <Header />
       
       <main className="container mx-auto px-4 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-12 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-9">
-              {relatedSearch && (
-                <div className="mb-8">
-                  {relatedSearch.blogs && (
-                    <div className="mb-4">
-                      <Link
-                        to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
-                        className="text-sm text-muted-foreground hover:text-primary"
-                      >
-                        ← Back to: {relatedSearch.blogs.title}
-                      </Link>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="px-3 py-1 bg-primary/20 text-primary rounded text-sm font-bold">
-                      WR-{relatedSearch.wr}
-                    </span>
-                    <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
-                  </div>
-                  <p className="text-muted-foreground">Sponsored results</p>
+        <div className="max-w-4xl mx-auto">
+          {relatedSearch && (
+            <div className="mb-8">
+              {relatedSearch.blogs && (
+                <div className="mb-4">
+                  <Link
+                    to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
+                    className="text-sm text-muted-foreground hover:text-primary"
+                  >
+                    ← Back to: {relatedSearch.blogs.title}
+                  </Link>
                 </div>
               )}
+              <div className="flex items-center gap-3 mb-2">
+                <span className="px-3 py-1 bg-primary/20 text-primary rounded text-sm font-bold">
+                  WR-{relatedSearch.wr}
+                </span>
+                <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
+              </div>
+              {relatedSearch.blogs && (
+                <p className="text-sm text-muted-foreground">
+                  {relatedSearch.blogs.title} ››› {relatedSearch.search_text} ››› WR-{relatedSearch.wr}
+                </p>
+              )}
+            </div>
+          )}
 
-              <div className="space-y-6">
-                {webResults.map((result) => (
-                  <div key={result.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition">
-                    <div className="flex items-start gap-4">
-                      {result.logo_url && (
-                        <div className="w-12 h-12 flex-shrink-0">
-                          <img
-                            src={result.logo_url}
-                            alt={result.title}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <h2 className="text-xl font-bold text-primary hover:underline">
-                            {result.title}
-                          </h2>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-1">{result.url}</p>
-                        {result.description && (
-                          <p className="text-foreground mb-4">{result.description}</p>
+          <div className="space-y-6">
+            {webResults.map((result) => (
+              <div key={result.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition">
+                <div className="flex items-start gap-4">
+                  {result.logo_url && (
+                    <div className="w-12 h-12 flex-shrink-0">
+                      <img
+                        src={result.logo_url}
+                        alt={result.title}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-primary hover:underline">
+                          {result.title}
+                        </h2>
+                        {result.is_sponsored && (
+                          <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 rounded text-xs font-semibold">
+                            Sponsored
+                          </span>
                         )}
-                        <Link
-                          to={`/pre-landing/${searchId}`}
-                          onClick={() => handleVisitClick(result.id)}
-                          className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition font-medium"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          Visit Website
-                        </Link>
                       </div>
                     </div>
+                    <p className="text-sm text-muted-foreground mb-1">{result.url}</p>
+                    {result.description && (
+                      <p className="text-foreground mb-4">{result.description}</p>
+                    )}
+                    <Link
+                      to={`/pre-landing/${searchId}`}
+                      onClick={() => handleVisitClick(result.id)}
+                      className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition font-medium"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Visit Website
+                    </Link>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-
-            {/* Sidebar */}
-            <aside className="lg:col-span-3">
-              <div className="sticky top-24">
-                <RecentPosts />
-              </div>
-            </aside>
+            ))}
           </div>
         </div>
       </main>
