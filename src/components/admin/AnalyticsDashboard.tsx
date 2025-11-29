@@ -1,29 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-interface AnalyticsData {
-  totalSessions: number;
-  totalPageViews: number;
-  totalClicks: number;
-  uniqueSessions: number;
-  uniqueIPs: number;
-  blogClicks: number;
-  relatedSearchClicks: number;
-  visitNowClicks: number;
-  totalEmails: number;
-}
-
-interface EventDetail {
-  event_type: string;
-  session_id: string;
-  ip_address: string;
-  device_type: string;
-  country: string;
-  source: string;
-  blog_id: string | null;
-  created_at: string;
-}
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface SessionAnalytics {
   session_id: string;
@@ -36,49 +15,99 @@ interface SessionAnalytics {
   blog_clicks: number;
 }
 
+interface BlogBreakdown {
+  blog_id: string;
+  blog_title: string;
+  total_clicks: number;
+  unique_clicks: number;
+}
+
+interface RelatedSearchBreakdown {
+  related_search_id: string;
+  search_text: string;
+  blog_title: string;
+  total_clicks: number;
+  unique_clicks: number;
+}
+
 const AnalyticsDashboard = () => {
-  const [analytics, setAnalytics] = useState<AnalyticsData>({
-    totalSessions: 0,
-    totalPageViews: 0,
-    totalClicks: 0,
-    uniqueSessions: 0,
-    uniqueIPs: 0,
-    blogClicks: 0,
-    relatedSearchClicks: 0,
-    visitNowClicks: 0,
-    totalEmails: 0
-  });
   const [sessionAnalytics, setSessionAnalytics] = useState<SessionAnalytics[]>([]);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [blogBreakdown, setBlogBreakdown] = useState<BlogBreakdown[]>([]);
+  const [relatedSearchBreakdown, setRelatedSearchBreakdown] = useState<RelatedSearchBreakdown[]>([]);
 
   useEffect(() => {
-    fetchAnalytics();
     fetchSessionAnalytics();
+    fetchBreakdown();
   }, []);
 
-  const fetchAnalytics = async () => {
-    const { data: events } = await supabase
+  const fetchBreakdown = async () => {
+    // Fetch blog clicks breakdown
+    const { data: blogEvents } = await supabase
       .from('analytics_events')
-      .select('*');
+      .select('blog_id, session_id, blogs(title)')
+      .eq('event_type', 'blog_click')
+      .not('blog_id', 'is', null);
 
-    const { data: emails } = await supabase
-      .from('email_submissions')
-      .select('*');
-
-    if (events) {
-      const uniqueSessions = new Set(events.map(e => e.session_id)).size;
-      const uniqueIPs = new Set(events.map(e => e.ip_address)).size;
+    if (blogEvents) {
+      const blogMap = new Map<string, { title: string; sessions: Set<string>; total: number }>();
       
-      setAnalytics({
-        totalSessions: events.length,
-        totalPageViews: events.filter(e => e.event_type === 'page_view').length,
-        totalClicks: events.filter(e => e.event_type.includes('click')).length,
-        uniqueSessions,
-        uniqueIPs,
-        blogClicks: events.filter(e => e.event_type === 'blog_click').length,
-        relatedSearchClicks: events.filter(e => e.event_type === 'related_search_click').length,
-        visitNowClicks: events.filter(e => e.event_type === 'visit_now_click').length,
-        totalEmails: emails?.length || 0
+      blogEvents.forEach((event: any) => {
+        const blogId = event.blog_id;
+        const blogTitle = event.blogs?.title || 'Unknown';
+        
+        if (!blogMap.has(blogId)) {
+          blogMap.set(blogId, { title: blogTitle, sessions: new Set(), total: 0 });
+        }
+        
+        const blog = blogMap.get(blogId)!;
+        blog.sessions.add(event.session_id);
+        blog.total++;
       });
+      
+      const breakdown: BlogBreakdown[] = Array.from(blogMap.entries()).map(([blog_id, data]) => ({
+        blog_id,
+        blog_title: data.title,
+        total_clicks: data.total,
+        unique_clicks: data.sessions.size
+      }));
+      
+      setBlogBreakdown(breakdown);
+    }
+
+    // Fetch related search clicks breakdown
+    const { data: searchEvents } = await supabase
+      .from('analytics_events')
+      .select('related_search_id, session_id, related_searches(search_text, blogs(title))')
+      .eq('event_type', 'related_search_click')
+      .not('related_search_id', 'is', null);
+
+    if (searchEvents) {
+      const searchMap = new Map<string, { searchText: string; blogTitle: string; sessions: Set<string>; total: number }>();
+      
+      searchEvents.forEach((event: any) => {
+        const searchId = event.related_search_id;
+        const searchText = event.related_searches?.search_text || 'Unknown';
+        const blogTitle = event.related_searches?.blogs?.title || 'Unknown';
+        
+        if (!searchMap.has(searchId)) {
+          searchMap.set(searchId, { searchText, blogTitle, sessions: new Set(), total: 0 });
+        }
+        
+        const search = searchMap.get(searchId)!;
+        search.sessions.add(event.session_id);
+        search.total++;
+      });
+      
+      const breakdown: RelatedSearchBreakdown[] = Array.from(searchMap.entries()).map(([related_search_id, data]) => ({
+        related_search_id,
+        search_text: data.searchText,
+        blog_title: data.blogTitle,
+        total_clicks: data.total,
+        unique_clicks: data.sessions.size
+      }));
+      
+      setRelatedSearchBreakdown(breakdown);
     }
   };
 
@@ -129,81 +158,84 @@ const AnalyticsDashboard = () => {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
-
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Total Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.totalSessions}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Unique Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.uniqueSessions}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Unique IPs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.uniqueIPs}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Total Emails</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.totalEmails}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Page Views</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.totalPageViews}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Blog Clicks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.blogClicks}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Related Search Clicks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.relatedSearchClicks}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Visit Now Clicks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{analytics.visitNowClicks}</p>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
+        <Button 
+          onClick={() => setShowBreakdown(!showBreakdown)}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          {showBreakdown ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          View Breakdown
+        </Button>
       </div>
+
+      {showBreakdown && (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Blog Clicks Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Blog Clicks Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {blogBreakdown.map((blog) => (
+                  <div key={blog.blog_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{blog.blog_title}</p>
+                    </div>
+                    <div className="flex gap-4 text-sm">
+                      <div className="text-center">
+                        <p className="font-bold text-primary">{blog.total_clicks}</p>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-secondary">{blog.unique_clicks}</p>
+                        <p className="text-xs text-muted-foreground">Unique</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {blogBreakdown.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No blog clicks yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Related Search Clicks Breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Related Search Clicks Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {relatedSearchBreakdown.map((search) => (
+                  <div key={search.related_search_id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{search.search_text}</p>
+                      <p className="text-xs text-muted-foreground">From: {search.blog_title}</p>
+                    </div>
+                    <div className="flex gap-4 text-sm">
+                      <div className="text-center">
+                        <p className="font-bold text-primary">{search.total_clicks}</p>
+                        <p className="text-xs text-muted-foreground">Total</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-bold text-secondary">{search.unique_clicks}</p>
+                        <p className="text-xs text-muted-foreground">Unique</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {relatedSearchBreakdown.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">No related search clicks yet</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="p-6">
