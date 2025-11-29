@@ -168,7 +168,7 @@ const BlogPost = () => {
                         key={search.id}
                         to={`/web-results/${search.id}`}
                         onClick={() => handleRelatedSearchClick(search.id)}
-                        className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-search-box-hover transition group"
+                        className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-search-box-hover hover:shadow-lg hover:scale-[1.02] transition-all duration-200 group cursor-pointer"
                       >
                         <span className="font-medium">{search.search_text}</span>
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -177,19 +177,6 @@ const BlogPost = () => {
                   </div>
                 </div>
               )}
-
-              {/* Disclaimer */}
-              <div className="mt-12 p-6 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  All content provided on this page is carefully researched, written, and reviewed to maintain a high level 
-                  of accuracy and reliability. While every effort is made to ensure the information is current and useful, 
-                  it is shared for general educational and informational purposes only. The material on this page should not 
-                  be interpreted as professional advice, diagnosis, or treatment in any area, including financial, medical, 
-                  or legal matters. Readers are strongly advised to verify information independently and consult qualified 
-                  professionals before making any personal, financial, health, or legal decisions based on the content 
-                  presented here.
-                </p>
-              </div>
             </article>
           </div>
         </div>
