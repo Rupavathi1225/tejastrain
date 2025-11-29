@@ -170,12 +170,7 @@ const BlogPost = () => {
                         onClick={() => handleRelatedSearchClick(search.id)}
                         className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-search-box-hover transition group"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="px-2 py-1 bg-primary/20 text-primary rounded text-xs font-bold">
-                            WR-{search.wr}
-                          </span>
-                          <span className="font-medium">{search.search_text}</span>
-                        </div>
+                        <span className="font-medium">{search.search_text}</span>
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     ))}

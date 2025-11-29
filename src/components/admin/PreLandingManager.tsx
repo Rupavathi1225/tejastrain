@@ -31,9 +31,16 @@ interface RelatedSearch {
   };
 }
 
+interface WebResult {
+  id: string;
+  title: string;
+  related_search_id: string;
+}
+
 const PreLandingManager = () => {
   const [configs, setConfigs] = useState<PreLandingConfig[]>([]);
   const [searches, setSearches] = useState<RelatedSearch[]>([]);
+  const [webResults, setWebResults] = useState<WebResult[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingConfig, setEditingConfig] = useState<PreLandingConfig | null>(null);
   const [formData, setFormData] = useState({
@@ -52,6 +59,7 @@ const PreLandingManager = () => {
   useEffect(() => {
     fetchConfigs();
     fetchSearches();
+    fetchWebResults();
   }, []);
 
   const fetchSearches = async () => {
@@ -60,6 +68,14 @@ const PreLandingManager = () => {
       .select('id, search_text, wr, blog_id, blogs(title)')
       .order('blog_id, wr');
     if (data) setSearches(data);
+  };
+
+  const fetchWebResults = async () => {
+    const { data } = await supabase
+      .from('web_results')
+      .select('id, title, related_search_id')
+      .order('related_search_id, order_index');
+    if (data) setWebResults(data);
   };
 
   const fetchConfigs = async () => {
@@ -134,7 +150,14 @@ const PreLandingManager = () => {
   const getSearchText = (searchId: string) => {
     const search = searches.find(s => s.id === searchId);
     if (!search) return searchId;
+    
     const blogTitle = search.blogs?.title || 'Unknown Blog';
+    const searchResults = webResults.filter(wr => wr.related_search_id === searchId);
+    const resultTitles = searchResults.map(r => r.title).join(' ››› ');
+    
+    if (resultTitles) {
+      return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr} ››› ${resultTitles}`;
+    }
     return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr}`;
   };
 
@@ -160,11 +183,19 @@ const PreLandingManager = () => {
                   <SelectValue placeholder="Select search" />
                 </SelectTrigger>
                 <SelectContent>
-                  {searches.map((search) => (
-                    <SelectItem key={search.id} value={search.id}>
-                      {search.blogs?.title} ››› {search.search_text} ››› WR-{search.wr}
-                    </SelectItem>
-                  ))}
+                  {searches.map((search) => {
+                    const searchResults = webResults.filter(wr => wr.related_search_id === search.id);
+                    const resultTitles = searchResults.map(r => r.title).join(' ››› ');
+                    const displayText = resultTitles 
+                      ? `${search.blogs?.title} ››› ${search.search_text} ››› WR-${search.wr} ››› ${resultTitles}`
+                      : `${search.blogs?.title} ››› ${search.search_text} ››› WR-${search.wr}`;
+                    
+                    return (
+                      <SelectItem key={search.id} value={search.id}>
+                        {displayText}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
