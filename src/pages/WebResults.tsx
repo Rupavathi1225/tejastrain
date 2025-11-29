@@ -74,7 +74,13 @@ const WebResults = () => {
       .order('order_index');
     
     if (resultsData) {
-      setWebResults(resultsData);
+      // Sort sponsored results to the top
+      const sortedResults = resultsData.sort((a, b) => {
+        if (a.is_sponsored && !b.is_sponsored) return -1;
+        if (!a.is_sponsored && b.is_sponsored) return 1;
+        return a.order_index - b.order_index;
+      });
+      setWebResults(sortedResults);
     }
   };
 
@@ -102,17 +108,7 @@ const WebResults = () => {
                   </Link>
                 </div>
               )}
-              <div className="flex items-center gap-3 mb-2">
-                <span className="px-3 py-1 bg-primary/20 text-primary rounded text-sm font-bold">
-                  WR-{relatedSearch.wr}
-                </span>
-                <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
-              </div>
-              {relatedSearch.blogs && (
-                <p className="text-sm text-muted-foreground">
-                  {relatedSearch.blogs.title} ››› {relatedSearch.search_text} ››› WR-{relatedSearch.wr}
-                </p>
-              )}
+              <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
             </div>
           )}
 
