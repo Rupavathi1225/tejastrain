@@ -20,6 +20,11 @@ interface WebResult {
 interface RelatedSearch {
   id: string;
   search_text: string;
+  wr: number;
+  blog_id: string;
+  blogs?: {
+    title: string;
+  };
 }
 
 const WebResultsManager = () => {
@@ -42,7 +47,10 @@ const WebResultsManager = () => {
   }, []);
 
   const fetchSearches = async () => {
-    const { data } = await supabase.from('related_searches').select('id, search_text');
+    const { data } = await supabase
+      .from('related_searches')
+      .select('id, search_text, wr, blog_id, blogs(title)')
+      .order('blog_id, wr');
     if (data) setSearches(data);
   };
 
@@ -132,7 +140,10 @@ const WebResultsManager = () => {
   };
 
   const getSearchText = (searchId: string) => {
-    return searches.find(s => s.id === searchId)?.search_text || searchId;
+    const search = searches.find(s => s.id === searchId);
+    if (!search) return searchId;
+    const blogTitle = search.blogs?.title || 'Unknown Blog';
+    return `${blogTitle} › ${search.search_text} (WR-${search.wr})`;
   };
 
   return (
@@ -159,7 +170,7 @@ const WebResultsManager = () => {
                 <SelectContent>
                   {searches.map((search) => (
                     <SelectItem key={search.id} value={search.id}>
-                      {search.search_text}
+                      {search.blogs?.title} › {search.search_text} (WR-{search.wr})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -222,7 +233,7 @@ const WebResultsManager = () => {
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left">Search</th>
+              <th className="px-6 py-3 text-left">Blog › Related Search</th>
               <th className="px-6 py-3 text-left">Title</th>
               <th className="px-6 py-3 text-left">URL</th>
               <th className="px-6 py-3 text-left">Actions</th>

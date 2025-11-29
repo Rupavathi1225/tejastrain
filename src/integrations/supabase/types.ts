@@ -234,6 +234,7 @@ export type Database = {
           id: string
           order_index: number | null
           search_text: string
+          wr: number | null
         }
         Insert: {
           blog_id?: string | null
@@ -241,6 +242,7 @@ export type Database = {
           id?: string
           order_index?: number | null
           search_text: string
+          wr?: number | null
         }
         Update: {
           blog_id?: string | null
@@ -248,6 +250,7 @@ export type Database = {
           id?: string
           order_index?: number | null
           search_text?: string
+          wr?: number | null
         }
         Relationships: [
           {

@@ -19,6 +19,16 @@ interface WebResult {
 interface RelatedSearch {
   id: string;
   search_text: string;
+  wr: number;
+  blog_id: string;
+  blogs?: {
+    title: string;
+    slug: string;
+    category_id: number;
+    categories?: {
+      name: string;
+    };
+  };
 }
 
 const WebResults = () => {
@@ -34,10 +44,20 @@ const WebResults = () => {
   }, [searchId]);
 
   const fetchWebResults = async () => {
-    // Fetch related search info
+    // Fetch related search info with blog details
     const { data: searchData } = await supabase
       .from('related_searches')
-      .select('*')
+      .select(`
+        *,
+        blogs (
+          title,
+          slug,
+          category_id,
+          categories (
+            name
+          )
+        )
+      `)
       .eq('id', searchId)
       .single();
     
@@ -74,7 +94,22 @@ const WebResults = () => {
             <div className="lg:col-span-9">
               {relatedSearch && (
                 <div className="mb-8">
-                  <h1 className="text-4xl font-bold mb-4">{relatedSearch.search_text}</h1>
+                  {relatedSearch.blogs && (
+                    <div className="mb-4">
+                      <Link
+                        to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
+                        className="text-sm text-muted-foreground hover:text-primary"
+                      >
+                        ← Back to: {relatedSearch.blogs.title}
+                      </Link>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="px-3 py-1 bg-primary/20 text-primary rounded text-sm font-bold">
+                      WR-{relatedSearch.wr}
+                    </span>
+                    <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
+                  </div>
                   <p className="text-muted-foreground">Sponsored results</p>
                 </div>
               )}
