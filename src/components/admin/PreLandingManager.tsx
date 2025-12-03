@@ -153,12 +153,14 @@ const PreLandingManager = () => {
     
     const blogTitle = search.blogs?.title || 'Unknown Blog';
     const searchResults = webResults.filter(wr => wr.related_search_id === searchId);
-    const resultTitles = searchResults.map(r => r.title).join(' ››› ');
     
-    if (resultTitles) {
-      return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr} ››› ${resultTitles}`;
+    // Format: Blog Title >> [Related Search: search_text] >> [Web Results: result1, result2]
+    let display = `${blogTitle} >> [Related Search: ${search.search_text}]`;
+    if (searchResults.length > 0) {
+      const resultTitles = searchResults.map(r => r.title).join(', ');
+      display += ` >> [Web Results: ${resultTitles}]`;
     }
-    return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr}`;
+    return display;
   };
 
   return (
@@ -185,10 +187,14 @@ const PreLandingManager = () => {
                 <SelectContent>
                   {searches.map((search) => {
                     const searchResults = webResults.filter(wr => wr.related_search_id === search.id);
-                    const resultTitles = searchResults.map(r => r.title).join(' ››› ');
-                    const displayText = resultTitles 
-                      ? `${search.blogs?.title} ››› ${search.search_text} ››› WR-${search.wr} ››› ${resultTitles}`
-                      : `${search.blogs?.title} ››› ${search.search_text} ››› WR-${search.wr}`;
+                    const blogTitle = search.blogs?.title || 'Unknown Blog';
+                    
+                    // Format: Blog Title >> [Related Search: search_text] >> [Web Results: result1, result2]
+                    let displayText = `${blogTitle} >> [Related Search: ${search.search_text}]`;
+                    if (searchResults.length > 0) {
+                      const resultTitles = searchResults.map(r => r.title).join(', ');
+                      displayText += ` >> [Web Results: ${resultTitles}]`;
+                    }
                     
                     return (
                       <SelectItem key={search.id} value={search.id}>
