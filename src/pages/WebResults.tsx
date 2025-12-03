@@ -139,8 +139,8 @@ const WebResults = () => {
                 onClick={() => handleVisitClick(result.id)}
                 className="block group"
               >
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <div className="flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
                     <img
                       src={result.logo_url || getFaviconUrl(result.url) || ''}
                       alt=""
@@ -150,22 +150,24 @@ const WebResults = () => {
                       }}
                     />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm text-foreground">{getDomain(result.url)}</span>
-                    <span className="text-xs text-muted-foreground truncate max-w-md">{result.url}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-sm text-foreground">{getDomain(result.url)}</span>
+                      {result.is_sponsored && (
+                        <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded text-xs font-medium">
+                          Sponsored
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground block truncate">{result.url}</span>
+                    <h2 className="text-xl text-primary group-hover:underline mt-1">
+                      {result.title}
+                    </h2>
+                    {result.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{result.description}</p>
+                    )}
                   </div>
-                  {result.is_sponsored && (
-                    <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded text-xs font-medium">
-                      Sponsored
-                    </span>
-                  )}
                 </div>
-                <h2 className="text-xl text-primary group-hover:underline mb-1">
-                  {result.title}
-                </h2>
-                {result.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{result.description}</p>
-                )}
               </Link>
             ))}
           </div>
