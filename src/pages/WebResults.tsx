@@ -5,7 +5,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import RecentPosts from "@/components/RecentPosts";
 import { trackPageView, trackVisitNowClick } from "@/utils/analytics";
-import { ExternalLink } from "lucide-react";
 
 interface WebResult {
   id: string;
@@ -90,16 +89,36 @@ const WebResults = () => {
     }
   };
 
+  // Extract domain from URL
+  const getDomain = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch {
+      return url;
+    }
+  };
+
+  // Get favicon URL
+  const getFaviconUrl = (url: string) => {
+    try {
+      const urlObj = new URL(url);
+      return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+    } catch {
+      return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
           {relatedSearch && (
-            <div className="mb-8">
+            <div className="mb-6">
               {relatedSearch.blogs && (
-                <div className="mb-4">
+                <div className="mb-3">
                   <Link
                     to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
                     className="text-sm text-muted-foreground hover:text-primary"
@@ -108,51 +127,46 @@ const WebResults = () => {
                   </Link>
                 </div>
               )}
-              <h1 className="text-4xl font-bold">{relatedSearch.search_text}</h1>
+              <h1 className="text-2xl font-medium text-foreground">{relatedSearch.search_text}</h1>
             </div>
           )}
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {webResults.map((result) => (
-              <div key={result.id} className="bg-card border border-border rounded-lg p-6 hover:shadow-md transition">
-                <div className="flex items-start gap-4">
-                  {result.logo_url && (
-                    <div className="w-12 h-12 flex-shrink-0">
-                      <img
-                        src={result.logo_url}
-                        alt={result.title}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-primary hover:underline">
-                          {result.title}
-                        </h2>
-                        {result.is_sponsored && (
-                          <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 rounded text-xs font-semibold">
-                            Sponsored
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">{result.url}</p>
-                    {result.description && (
-                      <p className="text-foreground mb-4">{result.description}</p>
-                    )}
-                    <Link
-                      to={`/pre-landing/${searchId}`}
-                      onClick={() => handleVisitClick(result.id)}
-                      className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition font-medium"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      Visit Website
-                    </Link>
+              <Link
+                key={result.id}
+                to={`/pre-landing/${searchId}`}
+                onClick={() => handleVisitClick(result.id)}
+                className="block group"
+              >
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <img
+                      src={result.logo_url || getFaviconUrl(result.url) || ''}
+                      alt=""
+                      className="w-4 h-4 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-foreground">{getDomain(result.url)}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-md">{result.url}</span>
+                  </div>
+                  {result.is_sponsored && (
+                    <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded text-xs font-medium">
+                      Sponsored
+                    </span>
+                  )}
                 </div>
-              </div>
+                <h2 className="text-xl text-primary group-hover:underline mb-1">
+                  {result.title}
+                </h2>
+                {result.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-2">{result.description}</p>
+                )}
+              </Link>
             ))}
           </div>
         </div>
