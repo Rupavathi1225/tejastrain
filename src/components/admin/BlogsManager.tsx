@@ -97,18 +97,70 @@ const BlogsManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this blog?")) return;
+    if (!confirm("Are you sure you want to delete this blog? This will also delete all related searches, web results, pre-landing configs, analytics, and email submissions.")) return;
     
-    const { error } = await supabase
-      .from('blogs')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
+    try {
+      // Get all related searches for this blog
+      const { data: relatedSearches } = await supabase
+        .from('related_searches')
+        .select('id')
+        .eq('blog_id', id);
+      
+      if (relatedSearches && relatedSearches.length > 0) {
+        const relatedSearchIds = relatedSearches.map(rs => rs.id);
+        
+        // Delete email submissions linked to related searches
+        await supabase
+          .from('email_submissions')
+          .delete()
+          .in('related_search_id', relatedSearchIds);
+        
+        // Delete analytics events linked to related searches
+        await supabase
+          .from('analytics_events')
+          .delete()
+          .in('related_search_id', relatedSearchIds);
+        
+        // Delete pre-landing configs linked to related searches
+        await supabase
+          .from('pre_landing_config')
+          .delete()
+          .in('related_search_id', relatedSearchIds);
+        
+        // Delete web results linked to related searches
+        await supabase
+          .from('web_results')
+          .delete()
+          .in('related_search_id', relatedSearchIds);
+        
+        // Delete related searches
+        await supabase
+          .from('related_searches')
+          .delete()
+          .eq('blog_id', id);
+      }
+      
+      // Delete analytics events linked directly to blog
+      await supabase
+        .from('analytics_events')
+        .delete()
+        .eq('blog_id', id);
+      
+      // Finally delete the blog
+      const { error } = await supabase
+        .from('blogs')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        toast.error("Error deleting blog: " + error.message);
+      } else {
+        toast.success("Blog deleted successfully");
+        fetchBlogs();
+      }
+    } catch (err) {
       toast.error("Error deleting blog");
-    } else {
-      toast.success("Blog deleted successfully");
-      fetchBlogs();
+      console.error(err);
     }
   };
 
