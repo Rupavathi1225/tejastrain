@@ -89,18 +89,48 @@ const RelatedSearchesManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this search?")) return;
+    if (!confirm("Are you sure you want to delete this search? This will also delete all web results, pre-landing configs, analytics, and email submissions.")) return;
     
-    const { error } = await supabase
-      .from('related_searches')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
+    try {
+      // Delete email submissions linked to this related search
+      await supabase
+        .from('email_submissions')
+        .delete()
+        .eq('related_search_id', id);
+      
+      // Delete analytics events linked to this related search
+      await supabase
+        .from('analytics_events')
+        .delete()
+        .eq('related_search_id', id);
+      
+      // Delete pre-landing configs linked to this related search
+      await supabase
+        .from('pre_landing_config')
+        .delete()
+        .eq('related_search_id', id);
+      
+      // Delete web results linked to this related search
+      await supabase
+        .from('web_results')
+        .delete()
+        .eq('related_search_id', id);
+      
+      // Finally delete the related search
+      const { error } = await supabase
+        .from('related_searches')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        toast.error("Error deleting search: " + error.message);
+      } else {
+        toast.success("Search deleted successfully");
+        fetchSearches();
+      }
+    } catch (err) {
       toast.error("Error deleting search");
-    } else {
-      toast.success("Search deleted successfully");
-      fetchSearches();
+      console.error(err);
     }
   };
 
