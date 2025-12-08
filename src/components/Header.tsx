@@ -27,7 +27,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-primary">TejasTarin</span>
+            <span className="text-2xl font-bold text-primary">Data Credit Zone</span>
           </Link>
           <nav className="flex items-center space-x-6">
             <Link to="/" className="text-blog-nav-text hover:text-primary transition">
