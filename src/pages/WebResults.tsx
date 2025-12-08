@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import RecentPosts from "@/components/RecentPosts";
 import { trackPageView, trackVisitNowClick } from "@/utils/analytics";
 
 interface WebResult {
@@ -109,69 +108,112 @@ const WebResults = () => {
     }
   };
 
+  // Generate masked URL for sponsored results
+  const getMaskedUrl = (index: number) => {
+    return `datacreditzone.lid${index + 1}`;
+  };
+
+  const sponsoredResults = webResults.filter(r => r.is_sponsored);
+  const normalResults = webResults.filter(r => !r.is_sponsored);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
-          {relatedSearch && (
-            <div className="mb-6">
-              {relatedSearch.blogs && (
-                <div className="mb-3">
-                  <Link
-                    to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
-                    className="text-sm text-muted-foreground hover:text-primary"
-                  >
-                    ← Back to: {relatedSearch.blogs.title}
-                  </Link>
-                </div>
-              )}
-              <h1 className="text-2xl font-medium text-foreground">{relatedSearch.search_text}</h1>
-            </div>
-          )}
-
-          <div className="space-y-8">
-            {webResults.map((result) => (
-              <Link
-                key={result.id}
-                to={`/pre-landing/${searchId}`}
-                onClick={() => handleVisitClick(result.id)}
-                className="block group"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <img
-                      src={result.logo_url || getFaviconUrl(result.url) || ''}
-                      alt=""
-                      className="w-4 h-4 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm text-foreground">{getDomain(result.url)}</span>
-                      {result.is_sponsored && (
-                        <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 rounded text-xs font-medium">
-                          Sponsored
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground block truncate">{result.url}</span>
-                    <h2 className="text-xl text-primary group-hover:underline mt-1">
+      <main>
+        {/* Sponsored Results Section - Dark Theme */}
+        {sponsoredResults.length > 0 && (
+          <div className="bg-[#1a1f2e] py-8">
+            <div className="container mx-auto px-4">
+              <div className="max-w-3xl mx-auto space-y-8">
+                {sponsoredResults.map((result, index) => (
+                  <div key={result.id} className="space-y-3">
+                    <h2 className="text-[#7b9fff] text-lg font-medium underline decoration-1 underline-offset-2">
                       {result.title}
                     </h2>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-gray-400">Sponsored</span>
+                      <span className="text-gray-500">·</span>
+                      <span className="text-gray-400">{getMaskedUrl(index)}</span>
+                      <span className="text-gray-500">⋮</span>
+                    </div>
                     {result.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{result.description}</p>
+                      <p className="text-[#a8b5c8] text-sm italic">{result.description}</p>
                     )}
+                    <Link
+                      to={`/pre-landing/${searchId}`}
+                      onClick={() => handleVisitClick(result.id)}
+                      className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold px-6 py-3 rounded transition-colors"
+                    >
+                      <span className="text-lg">➤</span>
+                      <span>Visit Website</span>
+                    </Link>
                   </div>
-                </div>
-              </Link>
-            ))}
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Normal Results Section - White Theme */}
+        {normalResults.length > 0 && (
+          <div className="bg-white py-8">
+            <div className="container mx-auto px-4">
+              <div className="max-w-3xl mx-auto">
+                <p className="text-gray-500 text-sm mb-4">Web Results</p>
+                <div className="space-y-6">
+                  {normalResults.map((result) => (
+                    <Link
+                      key={result.id}
+                      to={`/pre-landing/${searchId}`}
+                      onClick={() => handleVisitClick(result.id)}
+                      className="block group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <img
+                            src={result.logo_url || getFaviconUrl(result.url) || ''}
+                            alt=""
+                            className="w-4 h-4 object-contain"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm text-gray-800 font-medium">{getDomain(result.url)}</span>
+                          <span className="text-xs text-gray-500 block truncate">{result.url}</span>
+                          <h2 className="text-xl text-[#1a0dab] group-hover:underline mt-1">
+                            {result.title}
+                          </h2>
+                          {result.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">{result.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Back link */}
+        {relatedSearch?.blogs && (
+          <div className="bg-white py-4 border-t">
+            <div className="container mx-auto px-4">
+              <div className="max-w-3xl mx-auto">
+                <Link
+                  to={`/blog/${relatedSearch.blogs.categories?.name.toLowerCase().replace(/\s+/g, '-')}/${relatedSearch.blogs.slug}`}
+                  className="text-sm text-gray-500 hover:text-[#1a0dab]"
+                >
+                  ← Back to: {relatedSearch.blogs.title}
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />
