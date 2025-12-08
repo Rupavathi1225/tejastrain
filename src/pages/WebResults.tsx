@@ -140,14 +140,16 @@ const WebResults = () => {
                     {result.description && (
                       <p className="text-[#9aa0a6] text-sm italic">{result.description}</p>
                     )}
-                    <Link
-                      to={`/pre-landing/${searchId}`}
+                    <a
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       onClick={() => handleVisitClick(result.id)}
                       className="inline-flex items-center gap-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-6 py-3 rounded transition-colors mt-2"
                     >
                       <span className="text-lg">➤</span>
                       <span>Visit Website</span>
-                    </Link>
+                    </a>
                   </div>
                 ))}
               </div>
@@ -163,9 +165,11 @@ const WebResults = () => {
                 <p className="text-gray-500 text-sm mb-4">Web Results</p>
                 <div className="space-y-6">
                   {normalResults.map((result, index) => (
-                    <Link
+                    <a
                       key={result.id}
-                      to={`/pre-landing/${searchId}`}
+                      href={result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       onClick={() => handleVisitClick(result.id)}
                       className="block group"
                     >
@@ -191,7 +195,7 @@ const WebResults = () => {
                           )}
                         </div>
                       </div>
-                    </Link>
+                    </a>
                   ))}
                 </div>
               </div>
