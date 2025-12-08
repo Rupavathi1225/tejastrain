@@ -4,10 +4,10 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto text-center">
           <div className="mb-8">
-            <h3 className="text-2xl font-bold text-primary mb-4">TejasTarin</h3>
+            <h3 className="text-2xl font-bold text-primary mb-4">Data Credit Zone</h3>
             <p className="text-muted-foreground">
-              Thank you for visiting TejasTarin, your digital hub for embracing a vibrant and wholesome lifestyle. 
-              At TejasTarin, we're dedicated to inspiring and guiding you on the path to optimal well-being, 
+              Thank you for visiting Data Credit Zone, your digital hub for embracing a vibrant and wholesome lifestyle. 
+              At Data Credit Zone, we're dedicated to inspiring and guiding you on the path to optimal well-being, 
               offering a treasure trove of content that covers a spectrum of healthy lifestyle topics.
             </p>
           </div>
@@ -25,7 +25,7 @@ const Footer = () => {
           </div>
           
           <div className="mt-8 text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} TejasTarin. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Data Credit Zone. All rights reserved.</p>
           </div>
         </div>
       </div>

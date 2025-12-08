@@ -162,7 +162,7 @@ const WebResults = () => {
               <div className="max-w-3xl mx-auto">
                 <p className="text-gray-500 text-sm mb-4">Web Results</p>
                 <div className="space-y-6">
-                  {normalResults.map((result) => (
+                  {normalResults.map((result, index) => (
                     <Link
                       key={result.id}
                       to={`/pre-landing/${searchId}`}
@@ -181,8 +181,8 @@ const WebResults = () => {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm text-gray-800 font-medium">{getDomain(result.url)}</span>
-                          <span className="text-xs text-gray-500 block truncate">{result.url}</span>
+                          <span className="text-sm text-gray-800 font-medium">datacreditzone.lid{sponsoredResults.length + index + 1}</span>
+                          <span className="text-xs text-gray-500 block truncate">https://datacreditzone.lid{sponsoredResults.length + index + 1}</span>
                           <h2 className="text-xl text-[#1a0dab] group-hover:underline mt-1">
                             {result.title}
                           </h2>
