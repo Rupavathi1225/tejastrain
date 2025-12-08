@@ -121,29 +121,29 @@ const WebResults = () => {
       <Header />
       
       <main>
-        {/* Sponsored Results Section - Dark Theme */}
+        {/* Sponsored Results Section - Black Theme */}
         {sponsoredResults.length > 0 && (
-          <div className="bg-[#1a1f2e] py-8">
+          <div className="bg-[#1e2231] py-8">
             <div className="container mx-auto px-4">
-              <div className="max-w-3xl mx-auto space-y-8">
+              <div className="max-w-3xl mx-auto space-y-10">
                 {sponsoredResults.map((result, index) => (
-                  <div key={result.id} className="space-y-3">
-                    <h2 className="text-[#7b9fff] text-lg font-medium underline decoration-1 underline-offset-2">
+                  <div key={result.id} className="space-y-2">
+                    <h2 className="text-[#8ab4f8] text-lg font-medium underline decoration-1 underline-offset-4 uppercase tracking-wide">
                       {result.title}
                     </h2>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-gray-400">Sponsored</span>
                       <span className="text-gray-500">·</span>
                       <span className="text-gray-400">{getMaskedUrl(index)}</span>
-                      <span className="text-gray-500">⋮</span>
+                      <span className="text-gray-500 ml-1">⋮</span>
                     </div>
                     {result.description && (
-                      <p className="text-[#a8b5c8] text-sm italic">{result.description}</p>
+                      <p className="text-[#9aa0a6] text-sm italic">{result.description}</p>
                     )}
                     <Link
                       to={`/pre-landing/${searchId}`}
                       onClick={() => handleVisitClick(result.id)}
-                      className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold px-6 py-3 rounded transition-colors"
+                      className="inline-flex items-center gap-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-6 py-3 rounded transition-colors mt-2"
                     >
                       <span className="text-lg">➤</span>
                       <span>Visit Website</span>
