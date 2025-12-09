@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { trackEmailSubmission } from "@/utils/analytics";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,13 @@ interface PreLandingConfig {
 
 const PreLanding = () => {
   const { searchId } = useParams();
+  const location = useLocation();
   const [config, setConfig] = useState<PreLandingConfig | null>(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Get destination URL from route state (passed from WebResults) or fallback to config
+  const destinationUrl = (location.state as { destinationUrl?: string })?.destinationUrl;
 
   useEffect(() => {
     if (searchId) {
@@ -50,13 +54,14 @@ const PreLanding = () => {
     setLoading(true);
     try {
       await trackEmailSubmission(email, searchId);
-      toast.success("Thank you! Check your email.");
+      toast.success("Thank you! Redirecting...");
       setEmail("");
       
-      // Redirect after submission if destination URL exists
-      if (config?.destination_url) {
+      // Redirect after submission - use route state destinationUrl first, then config destination_url
+      const redirectUrl = destinationUrl || config?.destination_url;
+      if (redirectUrl) {
         setTimeout(() => {
-          window.location.href = config.destination_url!;
+          window.open(redirectUrl, '_blank');
         }, 1500);
       }
     } catch (error) {

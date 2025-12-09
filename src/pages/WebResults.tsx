@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,15 +32,28 @@ interface RelatedSearch {
 
 const WebResults = () => {
   const { searchId } = useParams();
+  const navigate = useNavigate();
   const [webResults, setWebResults] = useState<WebResult[]>([]);
   const [relatedSearch, setRelatedSearch] = useState<RelatedSearch | null>(null);
+  const [hasPreLanding, setHasPreLanding] = useState(false);
 
   useEffect(() => {
     if (searchId) {
       fetchWebResults();
+      checkPreLanding();
       trackPageView();
     }
   }, [searchId]);
+
+  const checkPreLanding = async () => {
+    const { data } = await supabase
+      .from('pre_landing_config')
+      .select('id')
+      .eq('related_search_id', searchId)
+      .single();
+    
+    setHasPreLanding(!!data);
+  };
 
   const fetchWebResults = async () => {
     // Fetch related search info with blog details
@@ -82,9 +95,15 @@ const WebResults = () => {
     }
   };
 
-  const handleVisitClick = (resultId: string) => {
+  const handleVisitClick = (e: React.MouseEvent, resultId: string, resultUrl: string) => {
     if (searchId) {
       trackVisitNowClick(searchId);
+    }
+    
+    // If pre-landing exists, prevent default and navigate to pre-landing with destination URL
+    if (hasPreLanding) {
+      e.preventDefault();
+      navigate(`/pre-landing/${searchId}`, { state: { destinationUrl: resultUrl } });
     }
   };
 
@@ -144,7 +163,7 @@ const WebResults = () => {
                       href={result.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => handleVisitClick(result.id)}
+                      onClick={(e) => handleVisitClick(e, result.id, result.url)}
                       className="inline-flex items-center gap-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white font-bold px-6 py-3 rounded transition-colors mt-2"
                     >
                       <span className="text-lg">➤</span>
@@ -170,7 +189,7 @@ const WebResults = () => {
                       href={result.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => handleVisitClick(result.id)}
+                      onClick={(e) => handleVisitClick(e, result.id, result.url)}
                       className="block group"
                     >
                       <div className="flex items-start gap-3">
