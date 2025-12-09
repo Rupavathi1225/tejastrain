@@ -46,13 +46,13 @@ const WebResults = () => {
   }, [searchId]);
 
   const checkPreLanding = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('pre_landing_config')
       .select('id')
       .eq('related_search_id', searchId)
-      .single();
+      .maybeSingle();
     
-    setHasPreLanding(!!data);
+    setHasPreLanding(!!data && !error);
   };
 
   const fetchWebResults = async () => {
