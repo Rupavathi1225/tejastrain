@@ -166,7 +166,7 @@ const BlogPost = () => {
                     {relatedSearches.map((search) => (
                       <Link
                         key={search.id}
-                        to={`/web-results/${search.id}`}
+                        to={`/web-results/${search.id}?wr=${search.wr}`}
                         onClick={() => handleRelatedSearchClick(search.id)}
                         className="flex items-center justify-between p-4 bg-search-box-bg text-search-box-text rounded-lg hover:bg-black hover:text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-200 group cursor-pointer"
                       >
