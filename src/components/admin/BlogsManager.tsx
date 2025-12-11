@@ -73,42 +73,36 @@ const BlogsManager = () => {
     
     try {
       const response = await fetch(
-        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        `https://sbfdyvzkmdbezivmppbm.supabase.co/functions/v1/generate-blog`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              {
-                role: "system",
-                content: "You are a professional blog content writer. Write engaging, informative, and SEO-friendly blog posts. Write in a conversational tone. Do not use markdown formatting, just plain text with proper paragraphs."
-              },
-              {
-                role: "user",
-                content: `Write a comprehensive blog post about "${formData.title}" in the ${selectedCategory?.name || 'general'} category. The blog should be around 400-600 words, informative, and engaging. Include an introduction, main points, and a conclusion. Do not include the title in your response.`
-              }
-            ],
+            title: formData.title,
+            category: selectedCategory?.name || "general",
+            imageOnly: false
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to generate content");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate content");
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
       
-      setFormData(prev => ({
-        ...prev,
-        content: content
-      }));
-      
-      toast.success("Content generated successfully!");
+      if (data.content) {
+        setFormData(prev => ({
+          ...prev,
+          content: data.content
+        }));
+        toast.success("Content generated successfully!");
+      } else {
+        toast.error("No content was generated");
+      }
     } catch (error) {
       console.error("Content generation error:", error);
       toast.error("Failed to generate content. Please try again.");
