@@ -40,6 +40,7 @@ const BlogsManager = () => {
     status: "published"
   });
   const [generatedSearches, setGeneratedSearches] = useState<string[]>([]);
+  const [selectedSearches, setSelectedSearches] = useState<number[]>([]); // indices of selected searches
 
   useEffect(() => {
     fetchBlogs();
@@ -196,13 +197,13 @@ const BlogsManager = () => {
       if (error) {
         toast.error("Error creating blog");
       } else {
-        // Insert generated related searches if any
-        if (generatedSearches.length > 0 && newBlog) {
-          const searchesToInsert = generatedSearches.map((searchText, index) => ({
+        // Insert selected related searches (exactly 4 with WR 1-4)
+        if (selectedSearches.length === 4 && newBlog) {
+          const searchesToInsert = selectedSearches.map((searchIndex, wrIndex) => ({
             blog_id: newBlog.id,
-            search_text: searchText,
-            order_index: index,
-            wr: 1
+            search_text: generatedSearches[searchIndex],
+            order_index: wrIndex,
+            wr: wrIndex + 1 // WR 1-4
           }));
           
           const { error: searchError } = await supabase
@@ -314,6 +315,7 @@ const BlogsManager = () => {
       status: "published"
     });
     setGeneratedSearches([]);
+    setSelectedSearches([]);
     setEditingBlog(null);
     setIsCreating(false);
   };
@@ -462,15 +464,46 @@ const BlogsManager = () => {
 
             {generatedSearches.length > 0 && (
               <div className="bg-muted/50 p-4 rounded-lg">
-                <label className="block text-sm font-medium mb-2">Generated Related Searches ({generatedSearches.length})</label>
-                <div className="flex flex-wrap gap-2">
-                  {generatedSearches.map((search, index) => (
-                    <span key={index} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                      {search}
-                    </span>
-                  ))}
+                <label className="block text-sm font-medium mb-2">
+                  Select 4 Related Searches (WR 1-4) - Selected: {selectedSearches.length}/4
+                </label>
+                <div className="space-y-2">
+                  {generatedSearches.map((search, index) => {
+                    const selectionIndex = selectedSearches.indexOf(index);
+                    const isSelected = selectionIndex !== -1;
+                    const wrNumber = isSelected ? selectionIndex + 1 : null;
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedSearches(prev => prev.filter(i => i !== index));
+                          } else if (selectedSearches.length < 4) {
+                            setSelectedSearches(prev => [...prev, index]);
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'bg-primary text-primary-foreground' 
+                            : selectedSearches.length >= 4 
+                              ? 'bg-muted/30 text-muted-foreground cursor-not-allowed' 
+                              : 'bg-card border border-border hover:bg-muted'
+                        }`}
+                      >
+                        <span className="text-sm">{search}</span>
+                        {wrNumber && (
+                          <span className="px-2 py-1 bg-primary-foreground text-primary rounded text-xs font-bold">
+                            WR-{wrNumber}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">These will be saved when you create the blog.</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Click to select/deselect. Selection order determines WR number (1st click = WR-1, etc.)
+                </p>
               </div>
             )}
           </div>
