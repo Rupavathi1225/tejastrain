@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Copy, Download, CheckCircle, XCircle } from "lucide-react";
 
 interface WebResult {
   id: string;
@@ -33,6 +34,7 @@ const WebResultsManager = () => {
   const [searches, setSearches] = useState<RelatedSearch[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingResult, setEditingResult] = useState<WebResult | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     related_search_id: "",
     title: "",
@@ -151,6 +153,116 @@ const WebResultsManager = () => {
     return `${blogTitle} ››› ${search.search_text} ››› WR-${search.wr}`;
   };
 
+  // Bulk action handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === results.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(results.map(r => r.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const exportToCSV = (data: WebResult[], filename: string) => {
+    const headers = ['ID', 'Related Search', 'Title', 'URL', 'Description', 'Is Sponsored', 'Order Index'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(result => [
+        result.id,
+        `"${getSearchText(result.related_search_id).replace(/"/g, '""')}"`,
+        `"${result.title.replace(/"/g, '""')}"`,
+        result.url,
+        `"${(result.description || '').replace(/"/g, '""')}"`,
+        result.is_sponsored,
+        result.order_index
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${data.length} results`);
+  };
+
+  const handleExportAll = () => {
+    exportToCSV(results, 'all-web-results.csv');
+  };
+
+  const handleExportSelected = () => {
+    const selected = results.filter(r => selectedIds.has(r.id));
+    exportToCSV(selected, 'selected-web-results.csv');
+  };
+
+  const handleCopySelected = () => {
+    const selected = results.filter(r => selectedIds.has(r.id));
+    const text = selected.map(r => `${r.title} - ${r.url}${r.is_sponsored ? ' (Sponsored)' : ''}`).join('\n');
+    navigator.clipboard.writeText(text);
+    toast.success(`Copied ${selected.length} results to clipboard`);
+  };
+
+  const handleActivateSelected = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('web_results')
+      .update({ is_sponsored: true })
+      .in('id', ids);
+    
+    if (error) {
+      toast.error("Error marking as sponsored");
+    } else {
+      toast.success(`Marked ${ids.length} results as sponsored`);
+      fetchResults();
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeactivateSelected = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('web_results')
+      .update({ is_sponsored: false })
+      .in('id', ids);
+    
+    if (error) {
+      toast.error("Error removing sponsored status");
+    } else {
+      toast.success(`Removed sponsored status from ${ids.length} results`);
+      fetchResults();
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} results?`)) return;
+    
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('web_results')
+      .delete()
+      .in('id', ids);
+    
+    if (error) {
+      toast.error("Error deleting results");
+    } else {
+      toast.success(`Deleted ${ids.length} results`);
+      setSelectedIds(new Set());
+      fetchResults();
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -246,22 +358,79 @@ const WebResultsManager = () => {
         </form>
       )}
 
+      {/* Bulk Actions Bar */}
+      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox 
+            checked={selectedIds.size === results.length && results.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">{selectedIds.size} of {results.length} selected</span>
+        </div>
+        <div className="flex flex-wrap gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={handleExportAll}>
+            <Download className="w-4 h-4 mr-1" />
+            Export All CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportSelected} disabled={selectedIds.size === 0}>
+            <Download className="w-4 h-4 mr-1" />
+            Export Selected ({selectedIds.size})
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCopySelected} disabled={selectedIds.size === 0}>
+            <Copy className="w-4 h-4 mr-1" />
+            Copy
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleActivateSelected} disabled={selectedIds.size === 0}>
+            <CheckCircle className="w-4 h-4 mr-1" />
+            Mark Sponsored
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDeactivateSelected} disabled={selectedIds.size === 0}>
+            <XCircle className="w-4 h-4 mr-1" />
+            Remove Sponsored
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} disabled={selectedIds.size === 0}>
+            <Trash2 className="w-4 h-4 mr-1" />
+            Delete ({selectedIds.size})
+          </Button>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
+              <th className="px-4 py-3 text-left w-12">
+                <Checkbox 
+                  checked={selectedIds.size === results.length && results.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
               <th className="px-6 py-3 text-left">Blog › Related Search</th>
               <th className="px-6 py-3 text-left">Title</th>
               <th className="px-6 py-3 text-left">URL</th>
+              <th className="px-6 py-3 text-left">Sponsored</th>
               <th className="px-6 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {results.map((result) => (
               <tr key={result.id} className="border-t border-border">
+                <td className="px-4 py-4">
+                  <Checkbox 
+                    checked={selectedIds.has(result.id)}
+                    onCheckedChange={() => toggleSelect(result.id)}
+                  />
+                </td>
                 <td className="px-6 py-4">{getSearchText(result.related_search_id)}</td>
                 <td className="px-6 py-4">{result.title}</td>
                 <td className="px-6 py-4 text-sm text-muted-foreground">{result.url}</td>
+                <td className="px-6 py-4">
+                  {result.is_sponsored && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                      Sponsored
+                    </span>
+                  )}
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(result)}>
