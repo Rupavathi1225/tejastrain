@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Sparkles, Loader2, Copy } from "lucide-react";
+import { Pencil, Trash2, Plus, Sparkles, Loader2, Copy, Download, CheckCircle, XCircle } from "lucide-react";
 
 interface Blog {
   id: string;
@@ -30,6 +31,7 @@ const BlogsManager = () => {
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -40,7 +42,7 @@ const BlogsManager = () => {
     status: "published"
   });
   const [generatedSearches, setGeneratedSearches] = useState<string[]>([]);
-  const [selectedSearches, setSelectedSearches] = useState<number[]>([]); // indices of selected searches
+  const [selectedSearches, setSelectedSearches] = useState<number[]>([]);
 
   useEffect(() => {
     fetchBlogs();
@@ -155,7 +157,7 @@ const BlogsManager = () => {
           ...prev,
           featured_image: data.imageUrl
         }));
-        toast.success("Image generated successfully!");
+        toast.success("Featured image generated successfully!");
       } else {
         toast.error("No image was generated");
       }
@@ -172,8 +174,7 @@ const BlogsManager = () => {
     
     const blogData = {
       ...formData,
-      category_id: parseInt(formData.category_id),
-      slug: formData.slug || generateSlug(formData.title)
+      category_id: parseInt(formData.category_id)
     };
 
     if (editingBlog) {
@@ -197,13 +198,12 @@ const BlogsManager = () => {
       if (error) {
         toast.error("Error creating blog");
       } else {
-        // Insert selected related searches (exactly 4 with WR 1-4)
         if (selectedSearches.length === 4 && newBlog) {
           const searchesToInsert = selectedSearches.map((searchIndex, wrIndex) => ({
             blog_id: newBlog.id,
             search_text: generatedSearches[searchIndex],
             order_index: wrIndex,
-            wr: wrIndex + 1 // WR 1-4
+            wr: wrIndex + 1
           }));
           
           const { error: searchError } = await supabase
@@ -211,10 +211,14 @@ const BlogsManager = () => {
             .insert(searchesToInsert);
           
           if (searchError) {
-            console.error("Error inserting related searches:", searchError);
+            console.error("Error saving related searches:", searchError);
+            toast.error("Blog created but failed to save related searches");
+          } else {
+            toast.success("Blog and related searches created successfully!");
           }
+        } else {
+          toast.success("Blog created successfully");
         }
-        toast.success("Blog created successfully");
       }
     }
 
@@ -223,56 +227,48 @@ const BlogsManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this blog? This will also delete all related searches, web results, pre-landing configs, analytics, and email submissions.")) return;
+    if (!confirm("Are you sure you want to delete this blog? This will also delete all related searches, web results, analytics, and email submissions.")) return;
     
     try {
-      // Get all related searches for this blog
       const { data: relatedSearches } = await supabase
         .from('related_searches')
         .select('id')
         .eq('blog_id', id);
       
       if (relatedSearches && relatedSearches.length > 0) {
-        const relatedSearchIds = relatedSearches.map(rs => rs.id);
+        const searchIds = relatedSearches.map(s => s.id);
         
-        // Delete email submissions linked to related searches
         await supabase
           .from('email_submissions')
           .delete()
-          .in('related_search_id', relatedSearchIds);
+          .in('related_search_id', searchIds);
         
-        // Delete analytics events linked to related searches
         await supabase
           .from('analytics_events')
           .delete()
-          .in('related_search_id', relatedSearchIds);
+          .in('related_search_id', searchIds);
         
-        // Delete pre-landing configs linked to related searches
         await supabase
           .from('pre_landing_config')
           .delete()
-          .in('related_search_id', relatedSearchIds);
+          .in('related_search_id', searchIds);
         
-        // Delete web results linked to related searches
         await supabase
           .from('web_results')
           .delete()
-          .in('related_search_id', relatedSearchIds);
-        
-        // Delete related searches
-        await supabase
-          .from('related_searches')
-          .delete()
-          .eq('blog_id', id);
+          .in('related_search_id', searchIds);
       }
       
-      // Delete analytics events linked directly to blog
       await supabase
         .from('analytics_events')
         .delete()
         .eq('blog_id', id);
       
-      // Finally delete the blog
+      await supabase
+        .from('related_searches')
+        .delete()
+        .eq('blog_id', id);
+      
       const { error } = await supabase
         .from('blogs')
         .delete()
@@ -318,6 +314,132 @@ const BlogsManager = () => {
     setSelectedSearches([]);
     setEditingBlog(null);
     setIsCreating(false);
+  };
+
+  // Bulk action handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === blogs.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(blogs.map(b => b.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const exportToCSV = (data: Blog[], filename: string) => {
+    const headers = ['ID', 'Title', 'Slug', 'Author', 'Status', 'Content'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(blog => [
+        blog.id,
+        `"${blog.title.replace(/"/g, '""')}"`,
+        blog.slug,
+        blog.author,
+        blog.status,
+        `"${blog.content.replace(/"/g, '""').substring(0, 100)}..."`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${data.length} blogs`);
+  };
+
+  const handleExportAll = () => {
+    exportToCSV(blogs, 'all-blogs.csv');
+  };
+
+  const handleExportSelected = () => {
+    const selected = blogs.filter(b => selectedIds.has(b.id));
+    exportToCSV(selected, 'selected-blogs.csv');
+  };
+
+  const handleCopySelected = () => {
+    const selected = blogs.filter(b => selectedIds.has(b.id));
+    const text = selected.map(b => `${b.title} - ${b.author} (${b.status})`).join('\n');
+    navigator.clipboard.writeText(text);
+    toast.success(`Copied ${selected.length} blogs to clipboard`);
+  };
+
+  const handleActivateSelected = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('blogs')
+      .update({ status: 'published' })
+      .in('id', ids);
+    
+    if (error) {
+      toast.error("Error activating blogs");
+    } else {
+      toast.success(`Activated ${ids.length} blogs`);
+      fetchBlogs();
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeactivateSelected = async () => {
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase
+      .from('blogs')
+      .update({ status: 'draft' })
+      .in('id', ids);
+    
+    if (error) {
+      toast.error("Error deactivating blogs");
+    } else {
+      toast.success(`Deactivated ${ids.length} blogs`);
+      fetchBlogs();
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} blogs? This will also delete all related data.`)) return;
+    
+    for (const id of selectedIds) {
+      await handleDeleteSingle(id);
+    }
+    
+    toast.success(`Deleted ${selectedIds.size} blogs`);
+    setSelectedIds(new Set());
+    fetchBlogs();
+  };
+
+  const handleDeleteSingle = async (id: string) => {
+    try {
+      const { data: relatedSearches } = await supabase
+        .from('related_searches')
+        .select('id')
+        .eq('blog_id', id);
+      
+      if (relatedSearches && relatedSearches.length > 0) {
+        const searchIds = relatedSearches.map(s => s.id);
+        await supabase.from('email_submissions').delete().in('related_search_id', searchIds);
+        await supabase.from('analytics_events').delete().in('related_search_id', searchIds);
+        await supabase.from('pre_landing_config').delete().in('related_search_id', searchIds);
+        await supabase.from('web_results').delete().in('related_search_id', searchIds);
+      }
+      
+      await supabase.from('analytics_events').delete().eq('blog_id', id);
+      await supabase.from('related_searches').delete().eq('blog_id', id);
+      await supabase.from('blogs').delete().eq('id', id);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -407,45 +529,41 @@ const BlogsManager = () => {
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={10}
+                rows={8}
                 required
-                placeholder="Enter blog content or generate with AI..."
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Featured Image</label>
-              <Button 
-                type="button" 
-                onClick={generateImageOnly}
-                disabled={isGeneratingImage || !formData.title.trim()}
-                variant="outline"
-                size="sm"
-                className="mb-2"
-              >
-                {isGeneratingImage ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate AI Image
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-2 mb-2">
+                <Button 
+                  type="button" 
+                  onClick={generateImageOnly}
+                  disabled={isGeneratingImage || !formData.title.trim()}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isGeneratingImage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate AI Image
+                    </>
+                  )}
+                </Button>
+              </div>
               <Input
                 value={formData.featured_image}
                 onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
-                placeholder="Or paste image URL here..."
+                placeholder="Image URL"
               />
               {formData.featured_image && (
-                <img 
-                  src={formData.featured_image} 
-                  alt="Featured preview" 
-                  className="mt-2 max-h-40 rounded-lg object-cover"
-                />
+                <img src={formData.featured_image} alt="Preview" className="mt-2 max-w-xs rounded-lg" />
               )}
             </div>
 
@@ -515,10 +633,53 @@ const BlogsManager = () => {
         </form>
       )}
 
+      {/* Bulk Actions Bar */}
+      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox 
+            checked={selectedIds.size === blogs.length && blogs.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">{selectedIds.size} of {blogs.length} selected</span>
+        </div>
+        <div className="flex flex-wrap gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={handleExportAll}>
+            <Download className="w-4 h-4 mr-1" />
+            Export All CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportSelected} disabled={selectedIds.size === 0}>
+            <Download className="w-4 h-4 mr-1" />
+            Export Selected ({selectedIds.size})
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCopySelected} disabled={selectedIds.size === 0}>
+            <Copy className="w-4 h-4 mr-1" />
+            Copy
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleActivateSelected} disabled={selectedIds.size === 0}>
+            <CheckCircle className="w-4 h-4 mr-1" />
+            Activate
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleDeactivateSelected} disabled={selectedIds.size === 0}>
+            <XCircle className="w-4 h-4 mr-1" />
+            Deactivate
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} disabled={selectedIds.size === 0}>
+            <Trash2 className="w-4 h-4 mr-1" />
+            Delete ({selectedIds.size})
+          </Button>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
+              <th className="px-4 py-3 text-left w-12">
+                <Checkbox 
+                  checked={selectedIds.size === blogs.length && blogs.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
               <th className="px-6 py-3 text-left">Title</th>
               <th className="px-6 py-3 text-left">Author</th>
               <th className="px-6 py-3 text-left">Status</th>
@@ -528,6 +689,12 @@ const BlogsManager = () => {
           <tbody>
             {blogs.map((blog) => (
               <tr key={blog.id} className="border-t border-border">
+                <td className="px-4 py-4">
+                  <Checkbox 
+                    checked={selectedIds.has(blog.id)}
+                    onCheckedChange={() => toggleSelect(blog.id)}
+                  />
+                </td>
                 <td className="px-6 py-4">{blog.title}</td>
                 <td className="px-6 py-4">{blog.author}</td>
                 <td className="px-6 py-4">

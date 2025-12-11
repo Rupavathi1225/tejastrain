@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Copy, Download } from "lucide-react";
 
 interface RelatedSearch {
   id: string;
@@ -24,6 +25,7 @@ const RelatedSearchesManager = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingSearch, setEditingSearch] = useState<RelatedSearch | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     blog_id: "",
     search_text: "",
@@ -92,31 +94,11 @@ const RelatedSearchesManager = () => {
     if (!confirm("Are you sure you want to delete this search? This will also delete all web results, pre-landing configs, analytics, and email submissions.")) return;
     
     try {
-      // Delete email submissions linked to this related search
-      await supabase
-        .from('email_submissions')
-        .delete()
-        .eq('related_search_id', id);
+      await supabase.from('email_submissions').delete().eq('related_search_id', id);
+      await supabase.from('analytics_events').delete().eq('related_search_id', id);
+      await supabase.from('pre_landing_config').delete().eq('related_search_id', id);
+      await supabase.from('web_results').delete().eq('related_search_id', id);
       
-      // Delete analytics events linked to this related search
-      await supabase
-        .from('analytics_events')
-        .delete()
-        .eq('related_search_id', id);
-      
-      // Delete pre-landing configs linked to this related search
-      await supabase
-        .from('pre_landing_config')
-        .delete()
-        .eq('related_search_id', id);
-      
-      // Delete web results linked to this related search
-      await supabase
-        .from('web_results')
-        .delete()
-        .eq('related_search_id', id);
-      
-      // Finally delete the related search
       const { error } = await supabase
         .from('related_searches')
         .delete()
@@ -153,6 +135,84 @@ const RelatedSearchesManager = () => {
 
   const getBlogTitle = (blogId: string) => {
     return blogs.find(b => b.id === blogId)?.title || blogId;
+  };
+
+  // Bulk action handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === searches.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(searches.map(s => s.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const exportToCSV = (data: RelatedSearch[], filename: string) => {
+    const headers = ['ID', 'Blog', 'Search Text', 'WR', 'Order Index'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(search => [
+        search.id,
+        `"${getBlogTitle(search.blog_id).replace(/"/g, '""')}"`,
+        `"${search.search_text.replace(/"/g, '""')}"`,
+        search.wr,
+        search.order_index
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${data.length} searches`);
+  };
+
+  const handleExportAll = () => {
+    exportToCSV(searches, 'all-related-searches.csv');
+  };
+
+  const handleExportSelected = () => {
+    const selected = searches.filter(s => selectedIds.has(s.id));
+    exportToCSV(selected, 'selected-related-searches.csv');
+  };
+
+  const handleCopySelected = () => {
+    const selected = searches.filter(s => selectedIds.has(s.id));
+    const text = selected.map(s => `${getBlogTitle(s.blog_id)} - ${s.search_text} (WR-${s.wr})`).join('\n');
+    navigator.clipboard.writeText(text);
+    toast.success(`Copied ${selected.length} searches to clipboard`);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} searches? This will also delete all related data.`)) return;
+    
+    for (const id of selectedIds) {
+      try {
+        await supabase.from('email_submissions').delete().eq('related_search_id', id);
+        await supabase.from('analytics_events').delete().eq('related_search_id', id);
+        await supabase.from('pre_landing_config').delete().eq('related_search_id', id);
+        await supabase.from('web_results').delete().eq('related_search_id', id);
+        await supabase.from('related_searches').delete().eq('id', id);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    toast.success(`Deleted ${selectedIds.size} searches`);
+    setSelectedIds(new Set());
+    fetchSearches();
   };
 
   return (
@@ -227,10 +287,45 @@ const RelatedSearchesManager = () => {
         </form>
       )}
 
+      {/* Bulk Actions Bar */}
+      <div className="bg-muted/50 border border-border rounded-lg p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox 
+            checked={selectedIds.size === searches.length && searches.length > 0}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">{selectedIds.size} of {searches.length} selected</span>
+        </div>
+        <div className="flex flex-wrap gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={handleExportAll}>
+            <Download className="w-4 h-4 mr-1" />
+            Export All CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportSelected} disabled={selectedIds.size === 0}>
+            <Download className="w-4 h-4 mr-1" />
+            Export Selected ({selectedIds.size})
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCopySelected} disabled={selectedIds.size === 0}>
+            <Copy className="w-4 h-4 mr-1" />
+            Copy
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteSelected} disabled={selectedIds.size === 0}>
+            <Trash2 className="w-4 h-4 mr-1" />
+            Delete ({selectedIds.size})
+          </Button>
+        </div>
+      </div>
+
       <div className="bg-card border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-muted">
             <tr>
+              <th className="px-4 py-3 text-left w-12">
+                <Checkbox 
+                  checked={selectedIds.size === searches.length && searches.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </th>
               <th className="px-6 py-3 text-left">Blog</th>
               <th className="px-6 py-3 text-left">Search Text</th>
               <th className="px-6 py-3 text-left">WR</th>
@@ -241,6 +336,12 @@ const RelatedSearchesManager = () => {
           <tbody>
             {searches.map((search) => (
               <tr key={search.id} className="border-t border-border">
+                <td className="px-4 py-4">
+                  <Checkbox 
+                    checked={selectedIds.has(search.id)}
+                    onCheckedChange={() => toggleSelect(search.id)}
+                  />
+                </td>
                 <td className="px-6 py-4">{getBlogTitle(search.blog_id)}</td>
                 <td className="px-6 py-4">{search.search_text}</td>
                 <td className="px-6 py-4">
