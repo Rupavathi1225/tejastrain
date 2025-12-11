@@ -208,9 +208,9 @@ const WebResultsManager = () => {
 
   const handleCopySelected = () => {
     const selected = results.filter(r => selectedIds.has(r.id));
-    const text = selected.map(r => `${r.title} - ${r.url}${r.is_sponsored ? ' (Sponsored)' : ''}`).join('\n');
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied ${selected.length} results to clipboard`);
+    const links = selected.map(r => r.url).join('\n');
+    navigator.clipboard.writeText(links);
+    toast.success(`Copied ${selected.length} result URLs to clipboard`);
   };
 
   const handleActivateSelected = async () => {

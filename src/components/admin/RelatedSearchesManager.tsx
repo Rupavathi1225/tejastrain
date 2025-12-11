@@ -190,9 +190,9 @@ const RelatedSearchesManager = () => {
 
   const handleCopySelected = () => {
     const selected = searches.filter(s => selectedIds.has(s.id));
-    const text = selected.map(s => `${getBlogTitle(s.blog_id)} - ${s.search_text} (WR-${s.wr})`).join('\n');
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied ${selected.length} searches to clipboard`);
+    const links = selected.map(s => `${window.location.origin}/web-results/${s.id}?wr=${s.wr}`).join('\n');
+    navigator.clipboard.writeText(links);
+    toast.success(`Copied ${selected.length} search links to clipboard`);
   };
 
   const handleDeleteSelected = async () => {
