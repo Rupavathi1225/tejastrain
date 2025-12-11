@@ -39,6 +39,7 @@ const BlogsManager = () => {
     featured_image: "",
     status: "published"
   });
+  const [generatedSearches, setGeneratedSearches] = useState<string[]>([]);
 
   useEffect(() => {
     fetchBlogs();
@@ -99,7 +100,13 @@ const BlogsManager = () => {
           ...prev,
           content: data.content
         }));
-        toast.success("Content generated successfully!");
+        
+        if (data.relatedSearches && data.relatedSearches.length > 0) {
+          setGeneratedSearches(data.relatedSearches);
+          toast.success(`Content and ${data.relatedSearches.length} related searches generated!`);
+        } else {
+          toast.success("Content generated successfully!");
+        }
       } else {
         toast.error("No content was generated");
       }
@@ -180,13 +187,32 @@ const BlogsManager = () => {
         toast.success("Blog updated successfully");
       }
     } else {
-      const { error } = await supabase
+      const { data: newBlog, error } = await supabase
         .from('blogs')
-        .insert([blogData]);
+        .insert([blogData])
+        .select()
+        .single();
       
       if (error) {
         toast.error("Error creating blog");
       } else {
+        // Insert generated related searches if any
+        if (generatedSearches.length > 0 && newBlog) {
+          const searchesToInsert = generatedSearches.map((searchText, index) => ({
+            blog_id: newBlog.id,
+            search_text: searchText,
+            order_index: index,
+            wr: 1
+          }));
+          
+          const { error: searchError } = await supabase
+            .from('related_searches')
+            .insert(searchesToInsert);
+          
+          if (searchError) {
+            console.error("Error inserting related searches:", searchError);
+          }
+        }
         toast.success("Blog created successfully");
       }
     }
@@ -287,6 +313,7 @@ const BlogsManager = () => {
       featured_image: "",
       status: "published"
     });
+    setGeneratedSearches([]);
     setEditingBlog(null);
     setIsCreating(false);
   };
@@ -432,6 +459,20 @@ const BlogsManager = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {generatedSearches.length > 0 && (
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <label className="block text-sm font-medium mb-2">Generated Related Searches ({generatedSearches.length})</label>
+                <div className="flex flex-wrap gap-2">
+                  {generatedSearches.map((search, index) => (
+                    <span key={index} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                      {search}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">These will be saved when you create the blog.</p>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-4 mt-6">
