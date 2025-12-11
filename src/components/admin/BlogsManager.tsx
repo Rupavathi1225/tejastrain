@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Plus, Sparkles, Loader2, Copy } from "lucide-react";
 
 interface Blog {
   id: string;
@@ -539,6 +539,20 @@ const BlogsManager = () => {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        const category = categories.find(c => c.id === blog.category_id);
+                        const categorySlug = category?.name.toLowerCase().replace(/\s+/g, '-') || 'uncategorized';
+                        const blogUrl = `${window.location.origin}/blog/${categorySlug}/${blog.slug}`;
+                        navigator.clipboard.writeText(blogUrl);
+                        toast.success("Blog link copied!");
+                      }}
+                      title="Copy blog link"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="sm" onClick={() => handleEdit(blog)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
