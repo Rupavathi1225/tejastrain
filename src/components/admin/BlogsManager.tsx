@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Sparkles, Loader2 } from "lucide-react";
 
 interface Blog {
   id: string;
@@ -28,6 +28,7 @@ const BlogsManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -58,6 +59,51 @@ const BlogsManager = () => {
 
   const generateSlug = (title: string) => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  };
+
+  const generateContent = async () => {
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title first");
+      return;
+    }
+
+    setIsGenerating(true);
+    const selectedCategory = categories.find(c => c.id.toString() === formData.category_id);
+    
+    try {
+      const response = await fetch(
+        `https://sbfdyvzkmdbezivmppbm.supabase.co/functions/v1/generate-blog`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: formData.title,
+            category: selectedCategory?.name || "general"
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content");
+      }
+
+      const data = await response.json();
+      
+      setFormData(prev => ({
+        ...prev,
+        content: data.content || prev.content,
+        featured_image: data.imageUrl || prev.featured_image
+      }));
+      
+      toast.success("Content and image generated successfully!");
+    } catch (error) {
+      console.error("Generation error:", error);
+      toast.error("Failed to generate content. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,16 +255,37 @@ const BlogsManager = () => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Title</label>
-              <Input
-                value={formData.title}
-                onChange={(e) => {
-                  setFormData({ ...formData, title: e.target.value });
-                  if (!editingBlog) {
-                    setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) });
-                  }
-                }}
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={formData.title}
+                  onChange={(e) => {
+                    setFormData({ ...formData, title: e.target.value });
+                    if (!editingBlog) {
+                      setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) });
+                    }
+                  }}
+                  required
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  onClick={generateContent}
+                  disabled={isGenerating || !formData.title.trim()}
+                  variant="secondary"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate with AI
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
 
             <div>
