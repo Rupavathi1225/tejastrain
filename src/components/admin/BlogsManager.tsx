@@ -28,7 +28,8 @@ const BlogsManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     slug: "",
@@ -61,13 +62,68 @@ const BlogsManager = () => {
     return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   };
 
-  const generateContent = async () => {
+  const generateContentOnly = async () => {
     if (!formData.title.trim()) {
       toast.error("Please enter a title first");
       return;
     }
 
-    setIsGenerating(true);
+    setIsGeneratingContent(true);
+    const selectedCategory = categories.find(c => c.id.toString() === formData.category_id);
+    
+    try {
+      const response = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: "You are a professional blog content writer. Write engaging, informative, and SEO-friendly blog posts. Write in a conversational tone. Do not use markdown formatting, just plain text with proper paragraphs."
+              },
+              {
+                role: "user",
+                content: `Write a comprehensive blog post about "${formData.title}" in the ${selectedCategory?.name || 'general'} category. The blog should be around 400-600 words, informative, and engaging. Include an introduction, main points, and a conclusion. Do not include the title in your response.`
+              }
+            ],
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate content");
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || "";
+      
+      setFormData(prev => ({
+        ...prev,
+        content: content
+      }));
+      
+      toast.success("Content generated successfully!");
+    } catch (error) {
+      console.error("Content generation error:", error);
+      toast.error("Failed to generate content. Please try again.");
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  const generateImageOnly = async () => {
+    if (!formData.title.trim()) {
+      toast.error("Please enter a title first");
+      return;
+    }
+
+    setIsGeneratingImage(true);
     const selectedCategory = categories.find(c => c.id.toString() === formData.category_id);
     
     try {
@@ -80,29 +136,32 @@ const BlogsManager = () => {
           },
           body: JSON.stringify({
             title: formData.title,
-            category: selectedCategory?.name || "general"
+            category: selectedCategory?.name || "general",
+            imageOnly: true
           }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to generate content");
+        throw new Error("Failed to generate image");
       }
 
       const data = await response.json();
       
-      setFormData(prev => ({
-        ...prev,
-        content: data.content || prev.content,
-        featured_image: data.imageUrl || prev.featured_image
-      }));
-      
-      toast.success("Content and image generated successfully!");
+      if (data.imageUrl) {
+        setFormData(prev => ({
+          ...prev,
+          featured_image: data.imageUrl
+        }));
+        toast.success("Image generated successfully!");
+      } else {
+        toast.error("No image was generated");
+      }
     } catch (error) {
-      console.error("Generation error:", error);
-      toast.error("Failed to generate content. Please try again.");
+      console.error("Image generation error:", error);
+      toast.error("Failed to generate image. Please try again.");
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingImage(false);
     }
   };
 
@@ -254,45 +313,33 @@ const BlogsManager = () => {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Title</label>
-              <div className="flex gap-2">
-                <Input
-                  value={formData.title}
-                  onChange={(e) => {
-                    setFormData({ ...formData, title: e.target.value });
-                    if (!editingBlog) {
-                      setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) });
-                    }
-                  }}
-                  required
-                  className="flex-1"
-                />
-                <Button 
-                  type="button" 
-                  onClick={generateContent}
-                  disabled={isGenerating || !formData.title.trim()}
-                  variant="secondary"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate with AI
-                    </>
-                  )}
-                </Button>
-              </div>
+              <label className="block text-sm font-medium mb-2">Title *</label>
+              <Input
+                value={formData.title}
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (!editingBlog) {
+                    setFormData({ ...formData, title: e.target.value, slug: generateSlug(e.target.value) });
+                  }
+                }}
+                required
+              />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Slug</label>
+              <label className="block text-sm font-medium mb-2">Slug *</label>
               <Input
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Author</label>
+              <Input
+                value={formData.author}
+                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                required
               />
             </div>
 
@@ -313,30 +360,70 @@ const BlogsManager = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Author</label>
-              <Input
-                value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Featured Image URL</label>
-              <Input
-                value={formData.featured_image}
-                onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Content</label>
+              <label className="block text-sm font-medium mb-2">Content *</label>
+              <Button 
+                type="button" 
+                onClick={generateContentOnly}
+                disabled={isGeneratingContent || !formData.title.trim()}
+                variant="outline"
+                size="sm"
+                className="mb-2"
+              >
+                {isGeneratingContent ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate AI Content
+                  </>
+                )}
+              </Button>
               <Textarea
                 value={formData.content}
                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                 rows={10}
                 required
+                placeholder="Enter blog content or generate with AI..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Featured Image</label>
+              <Button 
+                type="button" 
+                onClick={generateImageOnly}
+                disabled={isGeneratingImage || !formData.title.trim()}
+                variant="outline"
+                size="sm"
+                className="mb-2"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate AI Image
+                  </>
+                )}
+              </Button>
+              <Input
+                value={formData.featured_image}
+                onChange={(e) => setFormData({ ...formData, featured_image: e.target.value })}
+                placeholder="Or paste image URL here..."
+              />
+              {formData.featured_image && (
+                <img 
+                  src={formData.featured_image} 
+                  alt="Featured preview" 
+                  className="mt-2 max-h-40 rounded-lg object-cover"
+                />
+              )}
             </div>
 
             <div>

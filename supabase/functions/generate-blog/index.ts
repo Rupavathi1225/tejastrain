@@ -11,45 +11,52 @@ serve(async (req) => {
   }
 
   try {
-    const { title, category } = await req.json();
+    const { title, category, imageOnly } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Generate blog content
-    const contentResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional blog content writer. Write engaging, informative, and SEO-friendly blog posts. Write in a conversational tone. Do not use markdown formatting, just plain text with proper paragraphs."
-          },
-          {
-            role: "user",
-            content: `Write a comprehensive blog post about "${title}" in the ${category || 'general'} category. The blog should be around 400-600 words, informative, and engaging. Include an introduction, main points, and a conclusion. Do not include the title in your response.`
-          }
-        ],
-      }),
-    });
+    let content = "";
+    let imageUrl = "";
+    
+    // Only generate content if not imageOnly request
+    if (!imageOnly) {
+      console.log("Generating content for:", title);
+      const contentResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: "You are a professional blog content writer. Write engaging, informative, and SEO-friendly blog posts. Write in a conversational tone. Do not use markdown formatting, just plain text with proper paragraphs."
+            },
+            {
+              role: "user",
+              content: `Write a comprehensive blog post about "${title}" in the ${category || 'general'} category. The blog should be around 400-600 words, informative, and engaging. Include an introduction, main points, and a conclusion. Do not include the title in your response.`
+            }
+          ],
+        }),
+      });
 
-    if (!contentResponse.ok) {
-      const errorText = await contentResponse.text();
-      console.error("Content generation error:", errorText);
-      throw new Error("Failed to generate content");
+      if (!contentResponse.ok) {
+        const errorText = await contentResponse.text();
+        console.error("Content generation error:", errorText);
+        throw new Error("Failed to generate content");
+      }
+
+      const contentData = await contentResponse.json();
+      content = contentData.choices?.[0]?.message?.content || "";
     }
 
-    const contentData = await contentResponse.json();
-    const content = contentData.choices?.[0]?.message?.content || "";
-
-    // Generate image using the image model
+    // Generate image
+    console.log("Generating image for:", title);
     const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -67,8 +74,6 @@ serve(async (req) => {
         modalities: ["image", "text"]
       }),
     });
-
-    let imageUrl = "";
     
     if (imageResponse.ok) {
       const imageData = await imageResponse.json();
