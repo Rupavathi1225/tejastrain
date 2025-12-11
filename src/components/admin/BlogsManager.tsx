@@ -370,9 +370,13 @@ const BlogsManager = () => {
 
   const handleCopySelected = () => {
     const selected = blogs.filter(b => selectedIds.has(b.id));
-    const text = selected.map(b => `${b.title} - ${b.author} (${b.status})`).join('\n');
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied ${selected.length} blogs to clipboard`);
+    const links = selected.map(b => {
+      const category = categories.find(c => c.id === b.category_id);
+      const categorySlug = category?.name.toLowerCase().replace(/\s+/g, '-') || 'uncategorized';
+      return `${window.location.origin}/blog/${categorySlug}/${b.slug}`;
+    }).join('\n');
+    navigator.clipboard.writeText(links);
+    toast.success(`Copied ${selected.length} blog links to clipboard`);
   };
 
   const handleActivateSelected = async () => {
