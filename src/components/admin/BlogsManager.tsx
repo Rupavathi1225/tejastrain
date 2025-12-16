@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Sparkles, Loader2, Copy, Download, CheckCircle, XCircle } from "lucide-react";
+import { Pencil, Trash2, Plus, Sparkles, Loader2, Copy, Download, CheckCircle, XCircle, Wand2 } from "lucide-react";
+import BlogCreationWizard from "./BlogCreationWizard";
 
 interface Blog {
   id: string;
@@ -28,6 +29,7 @@ const BlogsManager = () => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isWizardMode, setIsWizardMode] = useState(false);
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null);
   const [isGeneratingContent, setIsGeneratingContent] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -314,6 +316,7 @@ const BlogsManager = () => {
     setSelectedSearches([]);
     setEditingBlog(null);
     setIsCreating(false);
+    setIsWizardMode(false);
   };
 
   // Bulk action handlers
@@ -450,11 +453,27 @@ const BlogsManager = () => {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Manage Blogs</h2>
-        <Button onClick={() => setIsCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Blog
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsWizardMode(true)} variant="default">
+            <Wand2 className="w-4 h-4 mr-2" />
+            AI Wizard
+          </Button>
+          <Button onClick={() => setIsCreating(true)} variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            Manual Create
+          </Button>
+        </div>
       </div>
+
+      {isWizardMode && (
+        <div className="mb-8">
+          <BlogCreationWizard
+            categories={categories}
+            onComplete={() => { resetForm(); fetchBlogs(); }}
+            onCancel={resetForm}
+          />
+        </div>
+      )}
 
       {isCreating && (
         <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 mb-8">
