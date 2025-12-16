@@ -150,6 +150,11 @@ const PreLandingManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.related_search_id) {
+      toast.error("Please select a web result first");
+      return;
+    }
+
     if (editingConfig) {
       const { error } = await supabase
         .from('pre_landing_config')
@@ -162,12 +167,25 @@ const PreLandingManager = () => {
         toast.success("Config updated successfully");
       }
     } else {
+      // Check if pre-landing already exists for this related search
+      const { data: existing } = await supabase
+        .from('pre_landing_config')
+        .select('id')
+        .eq('related_search_id', formData.related_search_id)
+        .maybeSingle();
+
+      if (existing) {
+        toast.error("A pre-landing already exists for this related search. Please edit the existing one instead.");
+        return;
+      }
+
       const { error } = await supabase
         .from('pre_landing_config')
         .insert([formData]);
       
       if (error) {
-        toast.error("Error creating config");
+        console.error("Error creating config:", error);
+        toast.error("Error creating config: " + error.message);
       } else {
         toast.success("Config created successfully");
       }
