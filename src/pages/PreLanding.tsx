@@ -61,7 +61,8 @@ const PreLanding = () => {
       const redirectUrl = destinationUrl || config?.destination_url;
       if (redirectUrl) {
         setTimeout(() => {
-          window.open(redirectUrl, '_blank');
+          // Redirect to the destination URL in the same window
+          window.location.href = redirectUrl;
         }, 1500);
       }
     } catch (error) {
