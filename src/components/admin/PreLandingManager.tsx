@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Pencil, Plus, Sparkles, Loader2, Eye } from "lucide-react";
+import { Pencil, Plus, Sparkles, Loader2, Eye, Trash2 } from "lucide-react";
 
 interface PreLandingConfig {
   id: string;
@@ -94,9 +94,6 @@ const PreLandingManager = () => {
     const webResult = webResults.find(w => w.id === selectedWebResult);
     if (!webResult) return;
 
-    // Find the related search for this web result
-    const relatedSearch = searches.find(s => s.id === webResult.related_search_id);
-
     setIsGenerating(true);
     try {
       const response = await fetch(
@@ -131,6 +128,22 @@ const PreLandingManager = () => {
       toast.error("Failed to generate pre-landing content");
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDelete = async (configId: string) => {
+    if (!confirm("Are you sure you want to delete this pre-landing page?")) return;
+
+    const { error } = await supabase
+      .from('pre_landing_config')
+      .delete()
+      .eq('id', configId);
+
+    if (error) {
+      toast.error("Error deleting pre-landing");
+    } else {
+      toast.success("Pre-landing deleted successfully");
+      fetchConfigs();
     }
   };
 
@@ -205,10 +218,14 @@ const PreLandingManager = () => {
     return `${search.blogs?.title || 'Unknown'} ››› ${search.search_text}`;
   };
 
-  // Filter web results by selected related search
-  const filteredWebResults = formData.related_search_id 
-    ? webResults.filter(w => w.related_search_id === formData.related_search_id)
-    : webResults;
+  // When web result is selected, auto-set the related_search_id
+  const handleWebResultSelect = (webResultId: string) => {
+    setSelectedWebResult(webResultId);
+    const webResult = webResults.find(w => w.id === webResultId);
+    if (webResult) {
+      setFormData(prev => ({ ...prev, related_search_id: webResult.related_search_id }));
+    }
+  };
 
   return (
     <div>
@@ -243,6 +260,9 @@ const PreLandingManager = () => {
                   <Button variant="outline" size="sm">
                     <Eye className="w-3 h-3 mr-1" />Preview
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(config.id)} className="text-destructive hover:text-destructive">
+                    <Trash2 className="w-3 h-3 mr-1" />Delete
+                  </Button>
                 </div>
               </div>
             ))}
@@ -256,14 +276,14 @@ const PreLandingManager = () => {
             <h3 className="text-xl font-bold mb-2">{editingConfig ? "Edit Pre-Landing" : "Create Pre-Landing"}</h3>
             <p className="text-sm text-muted-foreground mb-6">Configure your pre-landing page settings</p>
             
-            {/* AI Generation Section */}
+            {/* Web Result Selection & AI Generation */}
             {!editingConfig && (
               <div className="bg-muted/30 border border-border rounded-lg p-4 mb-6">
-                <label className="block text-sm font-medium mb-2">Select Web Result</label>
+                <label className="block text-sm font-medium mb-2">Select Web Result *</label>
                 <div className="flex gap-2">
-                  <Select value={selectedWebResult} onValueChange={setSelectedWebResult}>
+                  <Select value={selectedWebResult} onValueChange={handleWebResultSelect}>
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a web result to generate content" />
+                      <SelectValue placeholder="Select a web result" />
                     </SelectTrigger>
                     <SelectContent>
                       {webResults.map((wr) => {
@@ -291,28 +311,13 @@ const PreLandingManager = () => {
                 </div>
                 {selectedWebResult && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    Related URL: {webResults.find(w => w.id === selectedWebResult)?.title}
+                    Pre-landing will be linked to: {searches.find(s => s.id === formData.related_search_id)?.search_text}
                   </p>
                 )}
               </div>
             )}
             
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Related Search *</label>
-                <Select value={formData.related_search_id} onValueChange={(value) => setFormData({ ...formData, related_search_id: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select related search" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {searches.map((search) => (
-                      <SelectItem key={search.id} value={search.id}>
-                        {search.blogs?.title} ››› {search.search_text} ››› WR-{search.wr}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
