@@ -201,7 +201,7 @@ const BlogsManager = () => {
         toast.error("Error creating blog");
       } else {
         // Save selected related searches with WR assignments
-        if (selectedSearchIndices.length > 0 && newBlog) {
+        if (selectedSearchIndices.length === 4 && newBlog) {
           const searchesToInsert = selectedSearchIndices.map((searchIndex, wrIndex) => ({
             blog_id: newBlog.id,
             search_text: generatedSearches[searchIndex],
@@ -217,7 +217,7 @@ const BlogsManager = () => {
             console.error("Error saving related searches:", searchError);
             toast.error("Blog created but failed to save related searches");
           } else {
-            toast.success(`Blog and ${selectedSearchIndices.length} related searches created successfully!`);
+            toast.success("Blog and related searches created successfully!");
           }
         } else {
           toast.success("Blog created successfully");
