@@ -11,11 +11,150 @@ serve(async (req) => {
   }
 
   try {
-    const { title, category, imageOnly } = await req.json();
+    const { title, category, imageOnly, generateWebResults, generatePreLanding, searchText, webResultTitle } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Generate Web Results for a related search
+    if (generateWebResults && searchText) {
+      console.log("Generating web results for:", searchText);
+      const webResultsResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `You generate realistic web search results. Return EXACTLY 6 web results in JSON format. Each result must have:
+- title: A compelling headline (5-10 words)
+- description: A brief description (15-25 words)
+- url: A realistic looking URL (use real domain patterns like example.com, company-name.com)
+- name: Brand/company name (1-3 words)
+
+Return ONLY valid JSON array, no markdown, no explanation.`
+            },
+            {
+              role: "user",
+              content: `Generate 6 realistic web search results for the query: "${searchText}" in the ${category || 'general'} category. Return as JSON array.`
+            }
+          ],
+        }),
+      });
+
+      if (!webResultsResponse.ok) {
+        throw new Error("Failed to generate web results");
+      }
+
+      const webResultsData = await webResultsResponse.json();
+      let webResultsText = webResultsData.choices?.[0]?.message?.content || "[]";
+      
+      // Clean up the response
+      webResultsText = webResultsText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      let webResults = [];
+      try {
+        webResults = JSON.parse(webResultsText);
+      } catch (e) {
+        console.error("Failed to parse web results:", webResultsText);
+        webResults = [];
+      }
+
+      return new Response(
+        JSON.stringify({ webResults }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate Pre-Landing content
+    if (generatePreLanding && webResultTitle) {
+      console.log("Generating pre-landing for:", webResultTitle);
+      
+      // Generate pre-landing text content
+      const preLandingResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            {
+              role: "system",
+              content: `You generate landing page content. Return JSON with:
+- headline: Compelling headline (5-8 words)
+- description: Engaging description (20-30 words)
+- buttonText: CTA button text (2-4 words)
+
+Return ONLY valid JSON, no markdown.`
+            },
+            {
+              role: "user",
+              content: `Generate landing page content for: "${webResultTitle}" in the ${category || 'general'} category.`
+            }
+          ],
+        }),
+      });
+
+      let preLandingContent = { headline: "", description: "", buttonText: "Visit Now" };
+      
+      if (preLandingResponse.ok) {
+        const preLandingData = await preLandingResponse.json();
+        let preLandingText = preLandingData.choices?.[0]?.message?.content || "{}";
+        preLandingText = preLandingText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        
+        try {
+          preLandingContent = JSON.parse(preLandingText);
+        } catch (e) {
+          console.error("Failed to parse pre-landing content:", preLandingText);
+        }
+      }
+
+      // Generate pre-landing image
+      console.log("Generating pre-landing image for:", webResultTitle);
+      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [
+            {
+              role: "user",
+              content: `Create a professional, high-quality landing page hero image for "${webResultTitle}". The image should be visually appealing, modern, and suitable for a ${category || 'general'} landing page. Make it look like a professional stock photo. 16:9 aspect ratio, clean and professional.`
+            }
+          ],
+          modalities: ["image", "text"]
+        }),
+      });
+
+      let mainImageUrl = "";
+      if (imageResponse.ok) {
+        const imageData = await imageResponse.json();
+        const images = imageData.choices?.[0]?.message?.images;
+        if (images && images.length > 0) {
+          mainImageUrl = images[0].image_url?.url || "";
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          preLanding: {
+            ...preLandingContent,
+            mainImageUrl
+          }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     let content = "";
@@ -55,7 +194,7 @@ serve(async (req) => {
       const contentData = await contentResponse.json();
       content = contentData.choices?.[0]?.message?.content || "";
 
-      // Generate related searches
+      // Generate related searches - EXACTLY 6
       console.log("Generating related searches for:", title);
       const searchesResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -68,11 +207,11 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You generate related search queries. Each query must be EXACTLY 5 words. Return only the queries, one per line, no numbering, no extra text."
+              content: "You generate related search queries. Each query must be EXACTLY 5 words. Return EXACTLY 6 queries, one per line, no numbering, no extra text."
             },
             {
               role: "user",
-              content: `Generate between 1 and 6 related search queries for a blog about "${title}" in the ${category || 'general'} category. Each query MUST be EXACTLY 5 words. Return only the queries, one per line.`
+              content: `Generate EXACTLY 6 related search queries for a blog about "${title}" in the ${category || 'general'} category. Each query MUST be EXACTLY 5 words. Return only the queries, one per line.`
             }
           ],
         }),
@@ -86,6 +225,11 @@ serve(async (req) => {
           .map((s: string) => s.trim())
           .filter((s: string) => s.length > 0)
           .slice(0, 6);
+        
+        // Ensure we have exactly 6
+        while (relatedSearches.length < 6) {
+          relatedSearches.push(`Related search ${relatedSearches.length + 1} for topic`);
+        }
       }
     }
 
